@@ -44,36 +44,33 @@ class Trust_script:
     msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_1st']
     feat_tables = [ "feat$"+topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
     num_of_topics = 2001
-    accounts_table = ['twitter_accounts_1001', 'twitter_accounts_1001_core']
+    # accounts_table = ['twitter_accounts_1001', 'twitter_accounts_1001_core']
+    account_table = 'twitter_accounts_1001_uniques'
 
     word_to_int_dict = {}
     int_to_word_dict = {}
 
 
     def main(self):
-        three_hops_users_list = self.retrieve_users(self.accounts_table[0], 50)
-        two_hops_users_list = self.retrieve_users(self.accounts_table[1], 100)
+        three_hops_users_list = self.retrieve_users(self.account_table, 2)
+        two_hops_users_list = self.retrieve_users(self.account_table, 1)
         #two_hops_users_list = two_hops_users_list[:100]
-        #print trust_df
-        #print trust_df.avg_friends
-        #two_hops_users_list = trust_df[trust_df.num_of_friends>1].index.tolist()
-        #three_hops_users_list = trust_df.index.tolist()
         print ('2hops & 3 hops lengths: ' , len(two_hops_users_list) , ' , ', len(three_hops_users_list))
 
         #### dictionary of user_index to int index
         self.all_users_indices = { two_hops_users_list[i] : i for i in range(len(two_hops_users_list)) }
-        print (len(self.all_users_indices ))
+        print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
         for uid in  three_hops_users_list:
                 if uid not in two_hops_users_list:
                         self.all_users_indices[uid] = len(self.all_users_indices)
-        print (len(self.all_users_indices ))
+        print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
 
 
         network , updated_all_users_list = self.retrieve_network(two_hops_users_list, three_hops_users_list)
 
         #### filling trust_df dataframe, as well as building random friends list for each user in two hops distance by selecting randomly
         #### picking some friends from users in at most three hops distance to the root.
-        random_friends = self.random_draw( network, three_hops_users_list, two_hops_users_list)
+        random_friends = self.random_draw( network, two_hops_users_list, three_hops_users_list)
 
         #### initializing 3 dimension array which keeps corresponding value for each feature table, and each user, and each topic(here word).
         self.time_user_topic = np.zeros( ( len(self.msg_tables),len(self.all_users_indices) , self.num_of_topics) )
@@ -117,7 +114,7 @@ class Trust_script:
         c = conn.cursor()
         return c
 
-    def retrieve_users(self, table, statuses_threshold):
+    def retrieve_users(self, table, user_level):
         print ('db:retrieve_users' )
         users = []
         #columns = []
@@ -132,7 +129,7 @@ class Trust_script:
             #columns_name = self.cursor.fetchall()
             #for row in columns_name:
             #        columns.append(row[0])
-            sql = "select distinct id from {0} where statuses_count > {1}".format(table, statuses_threshold)
+            sql = "select distinct id from {0} where level <= {1}".format(table, user_level)
             self.cursor.execute(sql)
             result = self.cursor.fetchall()
             for row in result:
@@ -204,7 +201,7 @@ class Trust_script:
 
 
 
-    def random_draw(self, network, three_hops_users_list, two_hops_users_list):
+    def random_draw(self, network, two_hops_users_list, three_hops_users_list):
         print ( 'random_draw' )
         #df = trust_df[trust_df.num_of_friends > 1]
         #df = df[np.isfinite(df['diff_score'])]
