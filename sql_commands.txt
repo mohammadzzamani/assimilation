@@ -1,0 +1,77 @@
+3
+71
+5996
+
+select count(distinct dest_id)  from (select distinct t.dest_id  from twitter_network_1001 t join twitter_accounts_1001 s on t.source_id = s.id where s.counter < 74 and s.counter > 3) l join twitter_accounts_1001 m on l.dest_id = m.id;
+
+
+insert into messagesEn_1001_nrt_core select msg.* from ( select distinct dest_id  from (select distinct t.dest_id  from twitter_network_1001 t join twitter_accounts_1001 s on t.source_id = s.id where s.counter <= 74 ) l join twitter_accounts_1001 m on l.dest_id = m.id)  table1 join twitter_messagesEn_1001_nrt msg on table1.dest_id = msg.user_id;
+
+
+create table messagesEn_1001_nrt_core_sorted like messagesEn_1001_nrt_core;
+insert into messagesEn_1001_nrt_core_sorted (select 
+
+
+select  @rownum := @rownum + 1 as position , * from messagesEn_1001_nrt_core t join ( select @rownum := 0) r order by user_id, message_id  limit 10;
+
+select message_id, message, user_id, created_at, @rownum := @rownum + 1 as position from messagesEn_1001_nrt_core t join ( select @rownum := 0) r where t.user_id = 100932487 order by user_id, message_id limit 10;
+
+select s.user_id, min(s.position) , max(s.position) from ( select message_id, message, user_id, created_at, @rownum := @rownum + 1 as position from messagesEn_1001_nrt_core t join ( select @rownum := 0) r order by user_id, message_id ) s group by s.user_id;
+
+select m.message_id, m.message, m.user_id, m.created_at, m.retweet_count, m.favorite_count, m.is_rt from  ( select s.user_id, min(s.position) , max(s.position) from ( select message_id, message, user_id, created_at, @rownum := @rownum + 1 as position from messagesEn_1001_nrt_core t join ( select @rownum := 0) r order by user_id, message_id ) s group by s.user_id  ) table1 join  ( select msg.* ,  @rownum := @rownum + 1 as pos  from messagesEn_1001_nrt_core tt join ( select @rownum := 0) rr 
+
+
+
+-----
+create table messagesEn_1001_nrt_core_sort_helper ( user_id varchar(45) primary key , min_ int , max_ int ); 
+
+insert into messagesEn_1001_nrt_core_sort_helper (select s.user_id, min(s.position) as min_ , max(s.position) as max_  from ( select message_id, message, user_id, created_at, @rownum := @rownum + 1 as position from messagesEn_1001_nrt_core t join ( select @rownum := 0) r order by user_id, message_id ) s group by s.user_id) ;
+
+
+create table messagesEn_1001_nrt_core_sorted like messagesEn_1001_nrt_core; 
+alter table messagesEn_1001_nrt_core_sorted add column position int;
+insert into messagesEn_1001_nrt_core_sorted select t.*,  @rownum := @rownum + 1 as position from messagesEn_1001_nrt_core t join ( select @rownum := 0) r order by user_id, message_id;
+ 
+create table messagesEn_1001_nrt_core_1st like messagesEn_1001_nrt_core_sorted;
+insert into messagesEn_1001_nrt_core_1st select t.* from messagesEn_1001_nrt_core_sorted t  join messagesEn_1001_nrt_core_sort_helper ts on t.user_id = ts.user_id and t.position <= ( ts.min_ * 2.0  + ts.max_ * 1.0 )/ 3.0;
+-----
+
+create table twitter_accounts_1001_core like twitter_accounts_1001;
+alter table twitter_accounts_1001_core drop column counter;
+alter table twitter_accounts_1001_core add primary key (id);
+insert ignore into twitter_accounts_1001_core (id, username, last_message_id, followers_count, friends_count, created_at, favourites_count, statuses_count)  select id, username, last_message_id, followers_count, friends_count, created_at, favourites_count, statuses_count  from (select distinct t.dest_id  from twitter_network_1001 t join twitter_accounts_1001 s on t.source_id = s.id where s.counter <= 74 ) l join twitter_accounts_1001 m on l.dest_id = m.id;
+
+-----
+alter table twitter_accounts_1001_core add column last_nrt_message_id varchar(45);
+update  twitter_accounts_1001_core t set t.last_nrt_message_id  = (select max(message_id) from messagesEn_1001_nrt_core s where s.user_id = t.id)  ;
+update  twitter_accounts_1001_core t set t.last_message_id  = (select max(message_id) from twitter_messagesEn_1001 s where s.user_id = t.id)  ;
+
+alter table twitter_accounts_1001_core add column last_nrt_message_date varchar(45);
+update  twitter_accounts_1001_core t set t.last_nrt_message_date  = (select max(created_at) from messagesEn_1001_nrt_core s where s.user_id = t.id)  ;
+alter table twitter_accounts_1001_core add column last_message_date varchar(45);
+update  twitter_accounts_1001_core t set t.last_message_date  = (select max(created_at) from twitter_messagesEn_1001 s where s.user_id = t.id)  ;
+-----
+
+create table twitter_network_1001_core like twitter_network_1001;
+insert into twitter_network_1001_core select n.* from twitter_network_1001 n join twitter_accounts_1001_core a on n.source_id = a.id;
+
+alter table twitter_network_1001_core add column last_message_id varchar(45);
+alter table twitter_network_1001_core add column last_nrt_message_id varchar(45);
+update twitter_network_1001_core s join  twitter_accounts_1001_core a on s.source_id = a.id set s.last_message_id = a.last_message_id, set s.last_nrt_message_id = a.last_nrt_message_id;
+-----
+
+ 
+create table twitter_messagesEn_1001_nrt_friends like twitter_messagesEn_1001_nrt;
+alter table twitter_messagesEn_1001_nrt_friends add column parent_id varchar(45);
+alter table twitter_messagesEn_1001_nrt_friends drop primary key;
+alter table twitter_messagesEn_1001_nrt_friends add primary key ( parent_id, message_id );
+##insert into  twitter_messagesEn_1001_nrt_friends select m.* , n.source_id as parent_id from twitter_network_1001_core n join twitter_messagesEn_1001_nrt m on n.dest_id = m.user_id;
+alter table twitter_messagesEn_1001_nrt_friends_ add column parent_user_id varchar(95);
+alter table twitter_messagesEn_1001_nrt_friends_ add column parent_message_id varchar(95);
+##update twitter_messagesEn_1001_nrt_friends set parent_message_id = parent_id + '_' + message_id, set parent_user_id = parent_id + '_' + user_id;
+alter table twitter_messagesEn_1001_nrt_friends_ drop primary key, add primary key(parent_message_id);
+alter table twitter_messagesEn_1001_nrt_friends_ drop index user_existence, ADD index user_existence  (parent_user_id);
+insert into  twitter_messagesEn_1001_nrt_friends_ select m.* , n.source_id as parent_id , concat(n.source_id ,'_',m.user_id) as parent_user_id, concat(n.source_id ,'_', m.message_id ) as parent_message_id from twitter_network_1001_core n join twitter_messagesEn_1001_nrt m on n.dest_id = m.user_id;
+-----
+
+
