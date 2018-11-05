@@ -252,7 +252,7 @@ class Trust_script:
             raise
         if(self.cursor is not None):
             ####  save network as adjacency lists. A dictionary of nodes, in which For each node we keep its neighbors in a list
-            network = { two_hops_users_list[i] : [] for i in xrange(len(two_hops_users_list))}
+            network = { two_hops_users_list[i] : [] for i in range(len(two_hops_users_list))}
             #### for each node in two hops distance, we fetch its neighbors from db.
             for i in range(len(two_hops_users_list)):
                 user_id = two_hops_users_list[i]
@@ -273,35 +273,10 @@ class Trust_script:
         print ('len(updated_all_users_list): ', len(updated_all_users_list) )
         return network, list(updated_all_users_list)
 
-    def calculate_deltas(self, network, two_hops_users_list, friends_topics_avg, random_topics_avg):
-        print ("calculate_deltas" )
-        delete_mask = []
-        delta_tt = np.zeros(( len(two_hops_users_list), self.num_of_topics))
-        delta_tf = np.zeros(( len(two_hops_users_list), self.num_of_topics))
-        delta_tr = np.zeros(( len(two_hops_users_list), self.num_of_topics))
-        for user_id in two_hops_users_list:
-            user_index = self.all_users_indices[user_id]
-            delta_tt[user_index] = np.subtract(self.time_user_topic[1,user_index,:] , self.time_user_topic[0,user_index,:] )
-            delta_tf[user_index] = np.subtract(friends_topics_avg[user_index] , self.time_user_topic[0,user_index,:] )
-            delta_tr[user_index] = np.subtract(random_topics_avg[user_index] , self.time_user_topic[0,user_index, :] )
-            if len(network[user_id]) < 6:
-                    delete_mask.append(user_index)
-        print ('shapes: ' )
-        print (delta_tt.shape )
-        print (delta_tf.shape )
-        print (delta_tr.shape )
 
-        delta_tt = np.delete(delta_tt, delete_mask, 0)
-        delta_tf = np.delete(delta_tf, delete_mask, 0)
-        delta_tr = np.delete(delta_tr, delete_mask, 0)
-        print ("mask_len: " , len(delete_mask) )
-
-        print ("self.delta_tt.shape: ", delta_tt.shape )
-        print ("self.delta_tf.shape: ", delta_tf.shape )
-        print ("self.delta_tr.shape: ", delta_tr.shape )
-        return delta_tt, delta_tf, delta_tr
 
     def retrieve_topics(self, two_hops_users_list, updated_all_users_list):
+
         print ("retrieve_topics" )
         try:
             self.cursor = self.connectMysqlDB()
@@ -319,8 +294,8 @@ class Trust_script:
                 result = self.cursor.fetchall()
                 for row in result:
                     if not row[0] in words:
-                         words.append(row[0])
-                            print ('len(words): ' , len(words) )
+                        words.append(row[0])
+                        print ('len(words): ' , len(words) )
 
 
             #### make dictionaries of word to int and the inverse
@@ -378,6 +353,7 @@ class Trust_script:
             #        print 'delete_list, i:', i ,  ' ,  '
 
 
+
             #### normalize data over all users, for each word.
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
@@ -387,6 +363,34 @@ class Trust_script:
             print (' len(delete_list): ' , len(delete_list) )
             return delete_list
 
+
+    def calculate_deltas(self, network, two_hops_users_list, friends_topics_avg, random_topics_avg):
+        print ("calculate_deltas" )
+        delete_mask = []
+        delta_tt = np.zeros(( len(two_hops_users_list), self.num_of_topics))
+        delta_tf = np.zeros(( len(two_hops_users_list), self.num_of_topics))
+        delta_tr = np.zeros(( len(two_hops_users_list), self.num_of_topics))
+        for user_id in two_hops_users_list:
+            user_index = self.all_users_indices[user_id]
+            delta_tt[user_index] = np.subtract(self.time_user_topic[1,user_index,:] , self.time_user_topic[0,user_index,:] )
+            delta_tf[user_index] = np.subtract(friends_topics_avg[user_index] , self.time_user_topic[0,user_index,:] )
+            delta_tr[user_index] = np.subtract(random_topics_avg[user_index] , self.time_user_topic[0,user_index, :] )
+            if len(network[user_id]) < 6:
+                    delete_mask.append(user_index)
+        print ('shapes: ' )
+        print (delta_tt.shape )
+        print (delta_tf.shape )
+        print (delta_tr.shape )
+
+        delta_tt = np.delete(delta_tt, delete_mask, 0)
+        delta_tf = np.delete(delta_tf, delete_mask, 0)
+        delta_tr = np.delete(delta_tr, delete_mask, 0)
+        print ("mask_len: " , len(delete_mask) )
+
+        print ("self.delta_tt.shape: ", delta_tt.shape )
+        print ("self.delta_tf.shape: ", delta_tf.shape )
+        print ("self.delta_tr.shape: ", delta_tr.shape )
+        return delta_tt, delta_tf, delta_tr
 
 
 ts = Trust_script()
