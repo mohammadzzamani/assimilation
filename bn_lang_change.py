@@ -176,7 +176,7 @@ class Trust_script:
             friends_param.append(reg.coef_[0])
             order.append(i)
         print ('len(params): ' , len(params) )
-        return params , order
+        return params , friends_param, order
 
     def cosine_sim(self, delta_tt, delta_tf, delta_tr, delete_list):
         print ('cosine_sim:' )
