@@ -142,7 +142,7 @@ class Trust_script:
                 f.write(str( str(elem) + '\n'))
         elif isinstance(data, dict):
             for key,val in data.items():
-                if isinstance(val, list):
+                if isinstance(val, list) or type(val).__module__ == np.__name__ :
                     for elem in data:
                         f.write(str( str(elem) + '\n'))
                 elif abs(val) > thresh:
