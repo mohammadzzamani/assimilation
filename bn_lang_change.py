@@ -97,6 +97,7 @@ class Trust_script:
 
 
         print ('len(params): ' , len(params) )
+        print ('len(params[0]) : ' , len(params[0]))
 
         friends_param = dict(zip( [self.int_to_word_dict[val] for  val in order], friends_param) )
         params = dict(zip( [self.int_to_word_dict[val] for  val in order], params ) )
@@ -160,18 +161,21 @@ class Trust_script:
             X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ), axis = 1)
             Y = delta_tt[:,i]
 
-            print ('shapes: ', X.shape, ' , ' , Y.shape)
+
 
             reg = LinearRegression(fit_intercept=False).fit(X, Y)
 
             Ypred = reg.predict(X)
             mae = mean_absolute_error(Y, Ypred)
             # coefs = np.concatenate( (reg.coef_, np.array([reg.intercept_, mae]) ) )
-            coefs =  [ reg.coef_[0] , reg.coef_[1], reg.intercept_, mae]
+            coefs =  [ reg.coef_[0] , reg.coef_[1], reg.intercept_, mae ]
 
 
             if i% 1000 == 0:
                 print ( 'i: ', i, ' , ',  X.shape, ' , ', Y.shape , ' , ' , len(coefs))
+                print (len(params) , ' , ' , len(params[0]), ' , ', len(friends_param))
+                print ('coefs: ', coefs)
+                print (reg.coef_)
             params.append( coefs )
             friends_param.append(reg.coef_[0])
             order.append(i)
