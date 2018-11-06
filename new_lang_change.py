@@ -41,7 +41,7 @@ class Trust_script:
     topics = "cat_fb22_all_500t_cp_w"
     topics = 'cat_met_a30_2000_cp_w'
     msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt']
-    # msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_1st']
+    msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_2nd']
     feat_tables = [ "feat$"+topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
     num_of_topics = 2001
     # accounts_table = ['twitter_accounts_1001', 'twitter_accounts_1001_core']
@@ -52,8 +52,8 @@ class Trust_script:
 
 
     def main(self):
-        all_users_list = self.retrieve_users(self.account_table, 2)
-        core_users_list = self.retrieve_users(self.account_table, 1)
+        all_users_list = self.retrieve_users(self.account_table, 3, 200)
+        core_users_list = self.retrieve_users(self.account_table, 2, 200)
         print ('2hops & 3 hops lengths: ' , len(core_users_list) , ' , ', len(all_users_list))
 
         # #### dictionary of user_id to int index
@@ -116,7 +116,7 @@ class Trust_script:
         c = conn.cursor()
         return c
 
-    def retrieve_users(self, table, user_level):
+    def retrieve_users(self, table, user_level, statuses_threshold):
         print ('db:retrieve_users' )
         users = []
         #columns = []
@@ -131,7 +131,7 @@ class Trust_script:
             #columns_name = self.cursor.fetchall()
             #for row in columns_name:
             #        columns.append(row[0])
-            sql = "select distinct id from {0} where level <= {1}".format(table, user_level)
+            sql = "select distinct id from {0} where level <= {1} and statuses_count > {2}".format(table, user_level, statuses_threshold)
             self.cursor.execute(sql)
             result = self.cursor.fetchall()
             for row in result:
@@ -241,7 +241,7 @@ class Trust_script:
                     #### only add the neighbors, for which their language info is available
                     if  row[2] in self.all_users_indices:
                         friends.append(row[2])
-                friends  = random.sample(friends, min(len(friends), 100) )
+                # friends  = random.sample(friends, min(len(friends), 100) )
                 network[user_id] = friends
                 updated_all_users_list = updated_all_users_list.union(set(friends))
         print ('len(updated_all_users_list): ', len(updated_all_users_list) )
