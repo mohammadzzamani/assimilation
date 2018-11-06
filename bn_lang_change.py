@@ -103,6 +103,8 @@ class Trust_script:
         params = dict(zip( [self.int_to_word_dict[val] for  val in order], params ) )
         # cos_sims_r = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims_r ) )
 
+        print (params[:10])
+
         self.write_to_file(params, 'results/params.csv')
         self.write_to_file(friends_param, 'results/friends_param.csv')
         self.write_to_file(friends_param, 'results/friends_param_025.csv', 0.25)
@@ -145,7 +147,8 @@ class Trust_script:
             for key,val in data.items():
                 if isinstance(val, list) or type(val).__module__ == np.__name__ :
                     for elem in data:
-                        f.write(str( str(elem) + '\n'))
+                        f.write(str( str(elem) + '\t'))
+                    f.write('\n')
                 elif abs(val) > thresh:
                     f.write(str( str(key) + '\t,\t' + str(val) + '\n'))
         f.close()
@@ -158,12 +161,12 @@ class Trust_script:
             if i in delete_list:
                 continue
             X = np.concatenate(( delta_tf[:,i].reshape(delta_tf.shape[0],1), delta_tr[:,i].reshape(delta_tr.shape[0],1) ), axis = 1)
-            X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ), axis = 1)
+            # X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ), axis = 1)
             Y = delta_tt[:,i]
 
 
 
-            reg = LinearRegression(fit_intercept=False).fit(X, Y)
+            reg = LinearRegression().fit(X, Y)
 
             Ypred = reg.predict(X)
             mae = mean_absolute_error(Y, Ypred)
@@ -176,6 +179,7 @@ class Trust_script:
                 print (len(params) , ' , ' , len(params[0]), ' , ', len(friends_param))
                 print ('coefs: ', coefs)
                 print (reg.coef_)
+                print (params[:10])
             params.append( coefs )
             friends_param.append(reg.coef_[0])
             order.append(i)
