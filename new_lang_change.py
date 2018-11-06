@@ -83,7 +83,7 @@ class Trust_script:
 
 
         #### calculate average use of each word, among friends. For both actual friends list and random friends list.
-        friends_topics_avg, random_topics_avg  = self.friends_lang_avg(network, core_users_list, random_network)
+        friends_topics_avg, random_topics_avg  = self.friends_lang_avg(network, core_users_list)
 
         #### build delta_tt: language at t1 - language at t0 , delta_tf: language of friends - language at t0 , delta_tr: language of random friends - language at t0
         delta_tt, delta_tf, delta_tr = self.calculate_deltas(network, core_users_list, friends_topics_avg, random_topics_avg)
@@ -176,27 +176,30 @@ class Trust_script:
         return cos_sim , cos_sim_r, order
 
 
-    def friends_lang_avg(self, network , core_users_list, random_network):
+    def friends_lang_avg(self, network , core_users_list):
         print ( "calculate_friends_avg" )
-        print ( 'len(random_network): ', len(random_network) )
+        print ( 'len(network): ', len(network) )
         friends_topics_avg = np.zeros( ( len(core_users_list), self.num_of_topics) )
         random_topics_avg = np.zeros( ( len(core_users_list), self.num_of_topics) )
         print ( "len(friends_topics_avg): " , len(friends_topics_avg), ' , ', len(core_users_list) )
-        counter = 0
-        for user_id in core_users_list:
-            if user_id not in random_network:
-                continue
-            counter +=1
-            user_index = self.all_users_indices[user_id]
 
+        for user_id in core_users_list:
+            if user_id not in network:
+                continue
+            user_index = self.all_users_indices[user_id]
             friends = network[user_id]
             friends_indices = [ self.all_users_indices[fid] for fid in friends]
-            random_friends = random_network[user_id]
-            random_indices = [ self.all_users_indices[fid] for fid in random_friends]
-
             friends_topics_avg[user_index ] = np.mean(self.time_user_topic[2, friends_indices, :], axis = 0)
-            random_topics_avg [user_index ] = np.mean(self.time_user_topic[2 , random_indices, : ] , axis = 0)
         print ('friends_topics_avg.shape: ', friends_topics_avg.shape)
+
+        average = np.mean(self.time_user_topic[2 , : , : ] , axis = 0)
+        for user_id in core_users_list:
+            if user_id not in network:
+                continue
+            user_index = self.all_users_indices[user_id]
+            random_topics_avg [user_index ] = average
+        print ('random_topics_avg.shape: ', random_topics_avg.shape)
+
         return friends_topics_avg, random_topics_avg
 
 
