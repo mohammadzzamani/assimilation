@@ -160,10 +160,12 @@ class Trust_script:
             X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ), axis = 1)
             Y = delta_tt[:,i]
 
-            Ypred = reg.predict(X)
-            mae = mean_absolute_error(Y, Ypred)
+
 
             reg = LinearRegression(fit_intercept=False).fit(X, Y)
+
+            Ypred = reg.predict(X)
+            mae = mean_absolute_error(Y, Ypred)
             # coefs = np.concatenate( (reg.coef_, np.array([reg.intercept_, mae]) ) )
             coefs = np.array( [ reg.coef_[0] , reg.coef_[1], reg.intercept_, mae])
 
