@@ -157,7 +157,7 @@ class Trust_script:
             if i in delete_list:
                 continue
             X = np.concatenate(( delta_tf[:,i].reshape(delta_tf.shape[0],1), delta_tr[:,i].reshape(delta_tr.shape[0],1) ), axis = 1)
-            X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ))
+            X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ), axis = 1)
             Y = delta_tt[:,i]
 
             Ypred = reg.predict(X)
