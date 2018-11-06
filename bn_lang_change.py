@@ -150,7 +150,7 @@ class Trust_script:
         f.close()
 
     def learn_params(self, delta_tt, delta_tf, delta_tr, delete_list):
-        print ('cosine_sim:' )
+        print ('learn_params:' )
         print ( delta_tt.shape, ' , ', delta_tf.shape, ' , ', delta_tr.shape )
         params, friends_param, order = [], [], []
         for i in range(0,delta_tt.shape[1]):
@@ -160,18 +160,18 @@ class Trust_script:
             X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ), axis = 1)
             Y = delta_tt[:,i]
 
-
+            print ('shapes: ', X.shape, ' , ' , Y.shape)
 
             reg = LinearRegression(fit_intercept=False).fit(X, Y)
 
             Ypred = reg.predict(X)
             mae = mean_absolute_error(Y, Ypred)
             # coefs = np.concatenate( (reg.coef_, np.array([reg.intercept_, mae]) ) )
-            coefs = np.array( [ reg.coef_[0] , reg.coef_[1], reg.intercept_, mae])
+            coefs =  [ reg.coef_[0] , reg.coef_[1], reg.intercept_, mae]
 
 
             if i% 1000 == 0:
-                print ( 'i: ', i, ' , ',  X.shape, ' , ', Y.shape , ' , ' , coefs.shape)
+                print ( 'i: ', i, ' , ',  X.shape, ' , ', Y.shape , ' , ' , len(coefs))
             params.append( coefs )
             friends_param.append(reg.coef_[0])
             order.append(i)
