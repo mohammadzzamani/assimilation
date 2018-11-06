@@ -56,8 +56,16 @@ class Trust_script:
         core_users_list = self.retrieve_users(self.account_table, 1)
         print ('2hops & 3 hops lengths: ' , len(core_users_list) , ' , ', len(all_users_list))
 
-        #### dictionary of user_id to int index
-        self.all_users_indices = { all_users_list[i] : i for i in range(len(all_users_list)) }
+        # #### dictionary of user_id to int index
+        # self.all_users_indices = { all_users_list[i] : i for i in range(len(all_users_list)) }
+        # print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
+
+        #### dictionary of user_index to int index
+        self.all_users_indices = { core_users_list[i] : i for i in range(len(core_users_list)) }
+        print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
+        for uid in  all_users_list:
+                if uid not in core_users_list:
+                        self.all_users_indices[uid] = len(self.all_users_indices)
         print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
 
         #### retrive the network between core_users to all_users: network: dict{ user_id: [user_ids] }
