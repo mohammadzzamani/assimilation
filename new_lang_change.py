@@ -95,9 +95,9 @@ class Trust_script:
 
         #self.write_to_file(cos_sims, '1_cos_sims.csv')
         #self.write_to_file(cos_sims_r, '1_cos_sims_r.csv')
-        self.write_to_file( cos_sims_dif, '1_cos_sims_dif.csv')
-        self.write_to_file( cos_sims_dif, '1_cos_sims_dif_0.05.csv', 0.05)
-        #self.write_to_file( cos_sims_dif, '1_cos_sims_dif_0.1.csv', 0.1)
+        self.write_to_file( cos_sims_dif, 'results/1_cos_sims_dif.csv')
+        self.write_to_file( cos_sims_dif, 'results/1_cos_sims_dif_0.05.csv', 0.05)
+        self.write_to_file( cos_sims_dif, 'results/1_cos_sims_dif_0.1.csv', 0.1)
 
 
 
@@ -195,7 +195,7 @@ class Trust_script:
 
     def random_draw(self, network, core_users_list, all_users_list):
         print ( 'random_draw' )
-        random_network = { core_users_list[k] : [] for k in core_users_list }
+        random_network = { k : [] for k in core_users_list }
         for user_id in core_users_list:
             # friends_count = len(network[user_id])
             # random_indices = random.sample(range(len(all_users_list)), k = friends_count)
@@ -218,7 +218,7 @@ class Trust_script:
             raise
         if(self.cursor is not None):
             ####  save network as adjacency lists. A dictionary of nodes, in which For each node we keep its neighbors in a list
-            network = { core_users_list[k] : [] for k in core_users_list }
+            network = { k : [] for k in core_users_list }
             #### for each node in two hops distance, we fetch its neighbors from db.
             for user_id in core_users_list:
                 sql = "select * from {0} where source_id={1}".format(self.network_table, user_id)
