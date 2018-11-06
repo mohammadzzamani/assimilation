@@ -103,7 +103,7 @@ class Trust_script:
         params = dict(zip( [self.int_to_word_dict[val] for  val in order], params ) )
         # cos_sims_r = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims_r ) )
 
-        print (params[:10])
+        print (params)
 
         self.write_to_file(params, 'results/params.csv')
         self.write_to_file(friends_param, 'results/friends_param.csv')
@@ -145,8 +145,8 @@ class Trust_script:
                 f.write(str( str(elem) + '\n'))
         elif isinstance(data, dict):
             for key,val in data.items():
-                if isinstance(val, list) or type(val).__module__ == np.__name__ :
-                    for elem in data:
+                if isinstance(val, list)  :
+                    for elem in val:
                         f.write(str( str(elem) + '\t'))
                     f.write('\n')
                 elif abs(val) > thresh:
