@@ -43,7 +43,7 @@ class Trust_script:
     topics = "cat_fb22_all_500t_cp_w"
     topics = 'cat_met_a30_2000_cp_w'
     msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt']
-    msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_2nd']
+    msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_1st']
     feat_tables = [ "feat$"+topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
     num_of_topics = 2001
     # accounts_table = ['twitter_accounts_1001', 'twitter_accounts_1001_core']
@@ -157,7 +157,7 @@ class Trust_script:
             if i in delete_list:
                 continue
             X = np.concatenate(( delta_tf[:,i].reshape(delta_tf.shape[0],1), delta_tr[:,i].reshape(delta_tr.shape[0],1) ), axis = 1)
-            X = np.concatenate(( X, np.ones(( len(delta_tf.shape[0]), 1)) ))
+            X = np.concatenate(( X, np.ones(( delta_tf.shape[0], 1)) ))
             Y = delta_tt[:,i]
 
             Ypred = reg.predict(X)
