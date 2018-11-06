@@ -107,8 +107,8 @@ class Trust_script:
 
         self.write_to_file(params, 'results/params.csv')
         self.write_to_file(friends_param, 'results/friends_param.csv')
-        self.write_to_file(friends_param, 'results/friends_param_025.csv', 0.25)
-        self.write_to_file(friends_param, 'results/friends_param_05.csv', 0.5)
+        # self.write_to_file(friends_param, 'results/friends_param_025.csv', 0.25)
+        # self.write_to_file(friends_param, 'results/friends_param_05.csv', 0.5)
 
 
 
