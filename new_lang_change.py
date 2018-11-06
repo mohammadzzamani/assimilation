@@ -101,11 +101,12 @@ class Trust_script:
         cos_sims = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims ) )
         cos_sims_r = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims_r ) )
 
-        #self.write_to_file(cos_sims, '1_cos_sims.csv')
-        #self.write_to_file(cos_sims_r, '1_cos_sims_r.csv')
-        self.write_to_file( cos_sims_dif, 'results/1_cos_sims_dif.csv')
-        self.write_to_file( cos_sims_dif, 'results/1_cos_sims_dif_0.05.csv', 0.05)
-        self.write_to_file( cos_sims_dif, 'results/1_cos_sims_dif_0.1.csv', 0.1)
+        self.write_to_file(cos_sims, 'results/2_cs.csv')
+        self.write_to_file(cos_sims_r, 'results/2_cs_r.csv')
+        self.write_to_file( cos_sims_dif, 'results/2_cs_dif.csv')
+        self.write_to_file( cos_sims_dif, 'results/2_cs_dif_01.csv', 0.1)
+        self.write_to_file( cos_sims_dif, 'results/2_cs_dif_02.csv', 0.2)
+
 
 
 
