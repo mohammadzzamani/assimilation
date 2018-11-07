@@ -41,7 +41,7 @@ class Trust_script:
     topics = "cat_fb22_all_500t_cp_w"
     topics = 'cat_met_a30_2000_cp_w'
     msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt']
-    msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_2nd']
+    msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_1st']
     feat_tables = [ "feat$"+topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
     num_of_topics = 2001
     # accounts_table = ['twitter_accounts_1001', 'twitter_accounts_1001_core']

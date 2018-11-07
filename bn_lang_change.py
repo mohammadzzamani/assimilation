@@ -54,7 +54,7 @@ class Trust_script:
 
 
     def main(self):
-        all_users_list = self.retrieve_users(self.account_table, 0, 200)
+        all_users_list = self.retrieve_users(self.account_table, 2, 200)
         core_users_list = self.retrieve_users(self.account_table, 1, 200)
         print ('2hops & 3 hops lengths: ' , len(core_users_list) , ' , ', len(all_users_list))
 
