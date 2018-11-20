@@ -322,8 +322,7 @@ class Trust_script:
             #for i in delete_list:
             #        print 'delete_list, i:', i ,  ' ,  '
 
-
-	    '''
+            '''
             #### normalize data over all users, for each word.
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
@@ -332,7 +331,7 @@ class Trust_script:
                     self.time_user_topic[i,:,k] =   (self.time_user_topic[i,:,k] - average[2,k]) / variance[2,k]
             print (' len(delete_list): ' , len(delete_list) )
             '''
-	    return delete_list
+            return delete_list
 
 
     def calculate_deltas(self, network, core_users_list, friends_topics_avg, random_topics_avg):

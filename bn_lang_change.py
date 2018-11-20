@@ -58,9 +58,9 @@ class Trust_script:
         self.feat_tables = [ "feat$"+self.topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
         print ('feat_tables: ')
         print (self.feat_tables)
-	print ('core_depth: ', core_depth)
+        print ('core_depth: ', core_depth)
 	
-	all_users_list = self.retrieve_users(self.account_table, core_depth+1 , 200)
+        all_users_list = self.retrieve_users(self.account_table, core_depth+1 , 200)
         core_users_list = self.retrieve_users(self.account_table, core_depth, 200, 25)
         print ('2hops & 3 hops lengths: ' , len(core_users_list) , ' , ', len(all_users_list))
 
@@ -104,17 +104,15 @@ class Trust_script:
 
         print ('len(params): ' , len(params) )
         print ('len(params[0]) : ' , len(params[0]))
-	#print (params)
-	#print ('---------')
-	#print (order)
+
 
         friends_param = dict(zip( [self.int_to_word_dict[val] for  val in order], friends_param) )
         params = dict(zip( [self.int_to_word_dict[val] for  val in order], params ) )
         # cos_sims_r = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims_r ) )
 
         #print (params)
-	depth_suffix = str(core_depth)+''+str(core_depth+1)
-	tercile_prefix = 'norm_'+str(tercile)
+        depth_suffix = str(core_depth)+''+str(core_depth+1)
+        tercile_prefix = 'norm_'+str(tercile)
         self.write_to_file(params, 'results/'+tercile_prefix+'_params_'+depth_suffix+'.csv')
         self.write_to_file(friends_param, 'results/'+tercile_prefix+'_friends_param_'+depth_suffix+'.csv')
         # self.write_to_file(friends_param, 'results/friends_param_025.csv', 0.25)
@@ -149,18 +147,17 @@ class Trust_script:
 
 
     def write_to_file(self, data, file_name, thresh = 0):
-	print ('write_to_file')
-	print ('type: ' , type(data) )
+        print ('write_to_file')
+        print ('type: ' , type(data) )
         f = open(file_name,'w')
         if isinstance(data , list):
             for elem in data:
                 f.write(str( str(elem) + '\n'))
         elif isinstance(data, dict):
             for key,val in data.items():
-                
-		if isinstance(val, list)  :
+                if isinstance(val, list)  :
                     f.write(str( str(key) + '\t:\t') )
-		    for elem in val:
+                    for elem in val:
                         f.write(str( str(elem) + '\t'))
                     f.write('\n')
                 elif abs(val) > thresh:
@@ -190,7 +187,7 @@ class Trust_script:
             params.append( coefs) 
             friends_param.append(reg.coef_[0])
             order.append(i)
-	    if i% 2001 == 0:
+            if i% 2001 == 0:
                 print ( 'i: ', i, ' , ',  X.shape, ' , ', Y.shape , ' , ' , len(coefs))
                 #print (len(params) , ' , ' , len(params[0]), ' , ', len(friends_param))
                 print ('coefs: ', coefs)
@@ -204,9 +201,9 @@ class Trust_script:
                 print (Ypred)
                 print ('mae: ', mae)
         print ('len(params): ' , len(params) )
-	#print (params)
-	print ('len(order): ' , len(order) )
-	#print (order)
+        #print (params)
+        print ('len(order): ' , len(order) )
+        #print (order)
         return params , friends_param, order
 
     def cosine_sim(self, delta_tt, delta_tf, delta_tr, delete_list):
@@ -284,17 +281,17 @@ class Trust_script:
             ####  save network as adjacency lists. A dictionary of nodes, in which For each node we keep its neighbors in a list
             network = { k : [] for k in core_users_list }
             
-	    #### for each node in two hops distance, we fetch its neighbors from db.
+            #### for each node in two hops distance, we fetch its neighbors from db.
             sql = "select * from {0} where source_id in ({1})".format(self.network_table, ','.join([str(k) for k in core_users_list] ) )
             self.cursor.execute(sql)
             result = self.cursor.fetchall()
             for row in result:
                 source_id = row[1]
-		dest_id = row[2]
-		#### only add the neighbors, for which their language info is available
+                dest_id = row[2]
+                #### only add the neighbors, for which their language info is available
                 if  dest_id in self.all_users_indices:
                     network[source_id].append( dest_id )
-		    updated_all_users_list.add(dest_id)
+                    updated_all_users_list.add(dest_id)
         print ('len(updated_all_users_list): ', len(updated_all_users_list) )
         return network, list(updated_all_users_list)
 
@@ -362,7 +359,7 @@ class Trust_script:
             delete_list = []
             variance = np.var(self.time_user_topic,1)
             average = np.mean(self.time_user_topic,1)
-	    minimum = np.min(self.time_user_topic,1)
+            minimum = np.min(self.time_user_topic,1)
             maximum = np.max(self.time_user_topic,1)	
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
@@ -376,14 +373,14 @@ class Trust_script:
             #for i in delete_list:
             #        print 'delete_list, i:', i ,  ' ,  '
 
-	    #### normalize data over all users, for each word.
+            #### normalize data over all users, for each word.
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
                     continue
                 for i in range(self.time_user_topic.shape[0]):
                     self.time_user_topic[i,:,k] =   (self.time_user_topic[i,:,k] - minimum[2,k]) *1.0 / (maximum[2,k] - minimum[2,k])
             print (' len(delete_list): ' , len(delete_list) )
-	    '''
+            '''
             #### normalize data over all users, for each word.
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
@@ -392,7 +389,7 @@ class Trust_script:
                     self.time_user_topic[i,:,k] =   (self.time_user_topic[i,:,k] - average[2,k]) / variance[2,k]
             print (' len(delete_list): ' , len(delete_list) )
             '''
-	    return delete_list
+            return delete_list
 
     def calculate_deltas(self, network, core_users_list, friends_topics_avg, random_topics_avg):
         print ("calculate_deltas" )
@@ -405,7 +402,7 @@ class Trust_script:
             delta_tt[user_index] = np.subtract(self.time_user_topic[1,user_index,:] , self.time_user_topic[0,user_index,:] )
             delta_tf[user_index] = np.subtract(friends_topics_avg[user_index] , self.time_user_topic[0,user_index,:] )
             delta_tr[user_index] = np.subtract(random_topics_avg[user_index] , self.time_user_topic[0,user_index, :] )
-	    if len(network[user_id]) < 10:
+            if len(network[user_id]) < 10:
                     delete_mask.append(user_index)
         print ('shapes: ' )
         print (delta_tt.shape )
