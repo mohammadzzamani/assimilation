@@ -13,6 +13,7 @@ from matplotlib import pyplot
 import operator
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
+import sys, getopt, argparse
 
 class Trust_script:
 
@@ -42,9 +43,9 @@ class Trust_script:
     network_table = 'twitter_network_1001'
     topics = "cat_fb22_all_500t_cp_w"
     topics = 'cat_met_a30_2000_cp_w'
-    msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt']
-    msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_1st']
-    feat_tables = [ "feat$"+topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
+    #msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt']
+    #msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_1st']
+    #feat_tables = [ "feat$"+topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
     num_of_topics = 2001
     # accounts_table = ['twitter_accounts_1001', 'twitter_accounts_1001_core']
     account_table = 'twitter_accounts_1001_uniques'
@@ -53,9 +54,14 @@ class Trust_script:
     int_to_word_dict = {}
 
 
-    def main(self):
-        all_users_list = self.retrieve_users(self.account_table, 2, 200)
-        core_users_list = self.retrieve_users(self.account_table, 1, 200)
+    def main(self, msg_tables, tercile=0, core_depth=2):
+        self.feat_tables = [ "feat$"+self.topics+"$"+ msg_table +"$user_id$16to16" for msg_table in  msg_tables ]
+        print ('feat_tables: ')
+        print (self.feat_tables)
+	print ('core_depth: ', core_depth)
+	
+	all_users_list = self.retrieve_users(self.account_table, core_depth+1 , 200)
+        core_users_list = self.retrieve_users(self.account_table, core_depth, 200, 25)
         print ('2hops & 3 hops lengths: ' , len(core_users_list) , ' , ', len(all_users_list))
 
         # #### dictionary of user_id to int index
@@ -98,15 +104,19 @@ class Trust_script:
 
         print ('len(params): ' , len(params) )
         print ('len(params[0]) : ' , len(params[0]))
+	#print (params)
+	#print ('---------')
+	#print (order)
 
         friends_param = dict(zip( [self.int_to_word_dict[val] for  val in order], friends_param) )
         params = dict(zip( [self.int_to_word_dict[val] for  val in order], params ) )
         # cos_sims_r = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims_r ) )
 
-        print (params)
-
-        self.write_to_file(params, 'results/params.csv')
-        self.write_to_file(friends_param, 'results/friends_param.csv')
+        #print (params)
+	depth_suffix = str(core_depth)+''+str(core_depth+1)
+	tercile_prefix = 'norm_'+str(tercile)
+        self.write_to_file(params, 'results/'+tercile_prefix+'_params_'+depth_suffix+'.csv')
+        self.write_to_file(friends_param, 'results/'+tercile_prefix+'_friends_param_'+depth_suffix+'.csv')
         # self.write_to_file(friends_param, 'results/friends_param_025.csv', 0.25)
         # self.write_to_file(friends_param, 'results/friends_param_05.csv', 0.5)
 
@@ -120,7 +130,7 @@ class Trust_script:
         c = conn.cursor()
         return c
 
-    def retrieve_users(self, table, user_level, statuses_threshold):
+    def retrieve_users(self, table, user_level, statuses_threshold, friends_threshold=0):
         print ('db:retrieve_users' )
         users = []
         try:
@@ -129,7 +139,7 @@ class Trust_script:
             print("error while connecting to database:", sys.exc_info()[0])
             raise
         if(self.cursor is not None):
-            sql = "select distinct id from {0} where level <= {1} and statuses_count > {2}".format(table, user_level, statuses_threshold)
+            sql = "select distinct id from {0} where level <= {1} and statuses_count >= {2} and recorded_friends_count >= {3}".format(table, user_level, statuses_threshold, friends_threshold)
             self.cursor.execute(sql)
             result = self.cursor.fetchall()
             for row in result:
@@ -139,14 +149,18 @@ class Trust_script:
 
 
     def write_to_file(self, data, file_name, thresh = 0):
+	print ('write_to_file')
+	print ('type: ' , type(data) )
         f = open(file_name,'w')
         if isinstance(data , list):
             for elem in data:
                 f.write(str( str(elem) + '\n'))
         elif isinstance(data, dict):
             for key,val in data.items():
-                if isinstance(val, list)  :
-                    for elem in val:
+                
+		if isinstance(val, list)  :
+                    f.write(str( str(key) + '\t:\t') )
+		    for elem in val:
                         f.write(str( str(elem) + '\t'))
                     f.write('\n')
                 elif abs(val) > thresh:
@@ -173,17 +187,26 @@ class Trust_script:
             # coefs = np.concatenate( (reg.coef_, np.array([reg.intercept_, mae]) ) )
             coefs =  [ reg.coef_[0] , reg.coef_[1], reg.intercept_, mae ]
 
-
-            if i% 1000 == 0:
-                print ( 'i: ', i, ' , ',  X.shape, ' , ', Y.shape , ' , ' , len(coefs))
-                print (len(params) , ' , ' , len(params[0]), ' , ', len(friends_param))
-                print ('coefs: ', coefs)
-                print (reg.coef_)
-                print (params[:10])
-            params.append( coefs )
+            params.append( coefs) 
             friends_param.append(reg.coef_[0])
             order.append(i)
+	    if i% 2001 == 0:
+                print ( 'i: ', i, ' , ',  X.shape, ' , ', Y.shape , ' , ' , len(coefs))
+                #print (len(params) , ' , ' , len(params[0]), ' , ', len(friends_param))
+                print ('coefs: ', coefs)
+                print (reg.coef_)
+                #print (params[:10])
+                print ('X:')
+                print (X)
+                print ('Y:')
+                print (Y)
+                print ('YPRED:')
+                print (Ypred)
+                print ('mae: ', mae)
         print ('len(params): ' , len(params) )
+	#print (params)
+	print ('len(order): ' , len(order) )
+	#print (order)
         return params , friends_param, order
 
     def cosine_sim(self, delta_tt, delta_tf, delta_tr, delete_list):
@@ -260,19 +283,18 @@ class Trust_script:
         if(self.cursor is not None):
             ####  save network as adjacency lists. A dictionary of nodes, in which For each node we keep its neighbors in a list
             network = { k : [] for k in core_users_list }
-            #### for each node in two hops distance, we fetch its neighbors from db.
-            for user_id in core_users_list:
-                sql = "select * from {0} where source_id={1}".format(self.network_table, user_id)
-                self.cursor.execute(sql)
-                result = self.cursor.fetchall()
-                friends = []
-                for row in result:
-                    #### only add the neighbors, for which their language info is available
-                    if  row[2] in self.all_users_indices:
-                        friends.append(row[2])
-                # friends  = random.sample(friends, min(len(friends), 100) )
-                network[user_id] = friends
-                updated_all_users_list = updated_all_users_list.union(set(friends))
+            
+	    #### for each node in two hops distance, we fetch its neighbors from db.
+            sql = "select * from {0} where source_id in ({1})".format(self.network_table, ','.join([str(k) for k in core_users_list] ) )
+            self.cursor.execute(sql)
+            result = self.cursor.fetchall()
+            for row in result:
+                source_id = row[1]
+		dest_id = row[2]
+		#### only add the neighbors, for which their language info is available
+                if  dest_id in self.all_users_indices:
+                    network[source_id].append( dest_id )
+		    updated_all_users_list.add(dest_id)
         print ('len(updated_all_users_list): ', len(updated_all_users_list) )
         return network, list(updated_all_users_list)
 
@@ -320,7 +342,7 @@ class Trust_script:
                 print ('len(result): ', len(result))
                 for row in result:
                     counter+=1
-                    if counter % 1000000 == 0:
+                    if counter % 100000000 == 0:
                         print ( 'counter: ' , counter )
                     #### drop rows that users are not in all_users_indices list
                     if ( row[1] not  in self.all_users_indices ):
@@ -332,13 +354,16 @@ class Trust_script:
                     user = self.all_users_indices[row[1]]
                     topic = self.word_to_int_dict[row[2]]
                     #print ('i: ', i , ', user: ', user, ' topic: ', topic)
-                    self.time_user_topic[i, user, topic] = row[4]
+                    #if topic < self.num_of_topics:
+		    self.time_user_topic[i, user, topic] = row[4]
 
             #### since we want to normalize the data, we need the variance not to be zero,
             #### so we drop those words having 0 variance, by adding them to the delete_list
             delete_list = []
             variance = np.var(self.time_user_topic,1)
             average = np.mean(self.time_user_topic,1)
+	    minimum = np.min(self.time_user_topic,1)
+            maximum = np.max(self.time_user_topic,1)	
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
                     continue
@@ -351,8 +376,14 @@ class Trust_script:
             #for i in delete_list:
             #        print 'delete_list, i:', i ,  ' ,  '
 
-
-
+	    #### normalize data over all users, for each word.
+            for k in range(self.time_user_topic.shape[2]):
+                if k in delete_list:
+                    continue
+                for i in range(self.time_user_topic.shape[0]):
+                    self.time_user_topic[i,:,k] =   (self.time_user_topic[i,:,k] - minimum[2,k]) *1.0 / (maximum[2,k] - minimum[2,k])
+            print (' len(delete_list): ' , len(delete_list) )
+	    '''
             #### normalize data over all users, for each word.
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
@@ -360,8 +391,8 @@ class Trust_script:
                 for i in range(self.time_user_topic.shape[0]):
                     self.time_user_topic[i,:,k] =   (self.time_user_topic[i,:,k] - average[2,k]) / variance[2,k]
             print (' len(delete_list): ' , len(delete_list) )
-            return delete_list
-
+            '''
+	    return delete_list
 
     def calculate_deltas(self, network, core_users_list, friends_topics_avg, random_topics_avg):
         print ("calculate_deltas" )
@@ -374,7 +405,7 @@ class Trust_script:
             delta_tt[user_index] = np.subtract(self.time_user_topic[1,user_index,:] , self.time_user_topic[0,user_index,:] )
             delta_tf[user_index] = np.subtract(friends_topics_avg[user_index] , self.time_user_topic[0,user_index,:] )
             delta_tr[user_index] = np.subtract(random_topics_avg[user_index] , self.time_user_topic[0,user_index, :] )
-            if len(network[user_id]) < 10:
+	    if len(network[user_id]) < 10:
                     delete_mask.append(user_index)
         print ('shapes: ' )
         print (delta_tt.shape )
@@ -391,6 +422,23 @@ class Trust_script:
         print ("self.delta_tr.shape: ", delta_tr.shape )
         return delta_tt, delta_tf, delta_tr
 
+#########################################################################################
+#########################################################################################
+#########################################################################################
+parser = argparse.ArgumentParser(description='TEST/NO-TEST TRAINING')
+parser.add_argument('--tercile',  type=int,  default=0,
+                    help="specifies to train the learning model.")
+parser.add_argument('--core_depth',  type=int,  default=2,
+                    help="specifies to train the learning model.")
+args = parser.parse_args()
+
 
 ts = Trust_script()
-ts.main()
+if args.tercile == 1:
+   msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_1st']
+elif args.tercile == 2:
+   msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt_2nd']
+else:
+   msg_tables = ["msg_1001_nrt_core_1",  "msg_1001_nrt_core_2" ,  'msg_1001_nrt']
+
+ts.main(msg_tables, tercile=args.tercile, core_depth=args.core_depth)

@@ -53,7 +53,7 @@ class Trust_script:
 
     def main(self):
         all_users_list = self.retrieve_users(self.account_table, 3, 200)
-        core_users_list = self.retrieve_users(self.account_table, 2, 200)
+        core_users_list = self.retrieve_users(self.account_table, 2, 200, 25)
         print ('2hops & 3 hops lengths: ' , len(core_users_list) , ' , ', len(all_users_list))
 
         # #### dictionary of user_id to int index
@@ -101,11 +101,11 @@ class Trust_script:
         cos_sims = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims ) )
         cos_sims_r = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims_r ) )
 
-        self.write_to_file(cos_sims, 'results/2_cs.csv')
-        self.write_to_file(cos_sims_r, 'results/2_cs_r.csv')
-        self.write_to_file( cos_sims_dif, 'results/2_cs_dif.csv')
-        self.write_to_file( cos_sims_dif, 'results/2_cs_dif_01.csv', 0.1)
-        self.write_to_file( cos_sims_dif, 'results/2_cs_dif_02.csv', 0.2)
+        self.write_to_file(cos_sims, 'results/1_cs_23.csv')
+        self.write_to_file(cos_sims_r, 'results/1_cs_r_23.csv')
+        self.write_to_file( cos_sims_dif, 'results/1_cs_dif_23.csv')
+        self.write_to_file( cos_sims_dif, 'results/1_cs_dif_01_23.csv', 0.1)
+        self.write_to_file( cos_sims_dif, 'results/1_cs_dif_02_23.csv', 0.2)
 
 
 
@@ -116,7 +116,7 @@ class Trust_script:
         c = conn.cursor()
         return c
 
-    def retrieve_users(self, table, user_level, statuses_threshold):
+    def retrieve_users(self, table, user_level, statuses_threshold, friends_threshold = 0):
         print ('db:retrieve_users' )
         users = []
         #columns = []
@@ -131,7 +131,7 @@ class Trust_script:
             #columns_name = self.cursor.fetchall()
             #for row in columns_name:
             #        columns.append(row[0])
-            sql = "select distinct id from {0} where level <= {1} and statuses_count > {2}".format(table, user_level, statuses_threshold)
+            sql = "select distinct id from {0} where level <= {1} and statuses_count >= {2} and recorded_friends_count >= {3}".format(table, user_level, statuses_threshold, friends_threshold)
             self.cursor.execute(sql)
             result = self.cursor.fetchall()
             for row in result:
@@ -291,7 +291,7 @@ class Trust_script:
                 print ('len(result): ', len(result))
                 for row in result:
                     counter+=1
-                    if counter % 1000000 == 0:
+                    if counter % 8000000 == 0:
                         print ( 'counter: ' , counter )
                     #### drop rows that users are not in all_users_indices list
                     if ( row[1] not  in self.all_users_indices ):
@@ -323,7 +323,7 @@ class Trust_script:
             #        print 'delete_list, i:', i ,  ' ,  '
 
 
-
+	    '''
             #### normalize data over all users, for each word.
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
@@ -331,7 +331,8 @@ class Trust_script:
                 for i in range(self.time_user_topic.shape[0]):
                     self.time_user_topic[i,:,k] =   (self.time_user_topic[i,:,k] - average[2,k]) / variance[2,k]
             print (' len(delete_list): ' , len(delete_list) )
-            return delete_list
+            '''
+	    return delete_list
 
 
     def calculate_deltas(self, network, core_users_list, friends_topics_avg, random_topics_avg):
