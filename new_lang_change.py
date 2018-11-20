@@ -52,40 +52,41 @@ class Trust_script:
 
 
     def main(self):
-        three_hops_users_list = self.retrieve_users(self.account_table, 2)
-        two_hops_users_list = self.retrieve_users(self.account_table, 1)
-        #two_hops_users_list = two_hops_users_list[:100]
-        print ('2hops & 3 hops lengths: ' , len(two_hops_users_list) , ' , ', len(three_hops_users_list))
+        all_users_list = self.retrieve_users(self.account_table, 3, 200)
+        core_users_list = self.retrieve_users(self.account_table, 2, 200, 25)
+        print ('2hops & 3 hops lengths: ' , len(core_users_list) , ' , ', len(all_users_list))
+
+        # #### dictionary of user_id to int index
+        # self.all_users_indices = { all_users_list[i] : i for i in range(len(all_users_list)) }
+        # print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
 
         #### dictionary of user_index to int index
-        self.all_users_indices = { two_hops_users_list[i] : i for i in range(len(two_hops_users_list)) }
+        self.all_users_indices = { core_users_list[i] : i for i in range(len(core_users_list)) }
         print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
-        for uid in  three_hops_users_list:
-                if uid not in two_hops_users_list:
+        for uid in  all_users_list:
+                if uid not in core_users_list:
                         self.all_users_indices[uid] = len(self.all_users_indices)
         print ('(len(self.all_users_indices): ', len(self.all_users_indices ))
 
+        #### retrive the network between core_users to all_users: network: dict{ user_id: [user_ids] }
+        network , all_users_list = self.retrieve_network(core_users_list)
 
-        network , updated_all_users_list = self.retrieve_network(two_hops_users_list, three_hops_users_list)
+        #### building random friends list for each user in core_users_list random_network: dict{ user_id: [user_ids] }
+        random_network = self.random_draw( network, core_users_list, all_users_list)
 
-        #### filling trust_df dataframe, as well as building random friends list for each user in two hops distance by selecting randomly
-        #### picking some friends from users in at most three hops distance to the root.
-        random_friends = self.random_draw( network, two_hops_users_list, three_hops_users_list)
-
-        #### initializing 3 dimension array which keeps corresponding value for each feature table, and each user, and each topic(here word).
+        #### initializing 3 dimension array which keeps corresponding value for each feature table, and each user, and each topic/word.
         self.time_user_topic = np.zeros( ( len(self.msg_tables),len(self.all_users_indices) , self.num_of_topics) )
-        print (len(self.time_user_topic) )
-        print ( self.time_user_topic.shape )
+        print ( 'self.time_user_topic.shape : ', self.time_user_topic.shape )
 
-        #### retrieve topics ( here words ) by filling self.time_user_topic. As well as getting a list of words that should be later dropped from calculation.
-        delete_list = self.retrieve_topics(two_hops_users_list, updated_all_users_list)
-        print ( 'retrieved topics' )
+        #### retrieve topics/words  by filling self.time_user_topic. As well as getting a list of words that should be later dropped from calculation.
+        delete_list = self.retrieve_topics(core_users_list, all_users_list)
+
 
         #### calculate average use of each word, among friends. For both actual friends list and random friends list.
-        friends_topics_avg, random_topics_avg  = self.friends_lang_avg(network, two_hops_users_list, random_friends)
+        friends_topics_avg, random_topics_avg  = self.friends_lang_avg(network, core_users_list)
 
         #### build delta_tt: language at t1 - language at t0 , delta_tf: language of friends - language at t0 , delta_tr: language of random friends - language at t0
-        delta_tt, delta_tf, delta_tr = self.calculate_deltas(network, two_hops_users_list, friends_topics_avg, random_topics_avg)
+        delta_tt, delta_tf, delta_tr = self.calculate_deltas(network, core_users_list, friends_topics_avg, random_topics_avg)
         #correlations = self.correlation( delta_tt, delta_tf)
 
         #### calculate the cosine similarity measure for both friends and random_friends.
@@ -100,11 +101,12 @@ class Trust_script:
         cos_sims = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims ) )
         cos_sims_r = dict(zip( [self.int_to_word_dict[val] for  val in order], cos_sims_r ) )
 
-        #self.write_to_file(cos_sims, '1_cos_sims.csv')
-        #self.write_to_file(cos_sims_r, '1_cos_sims_r.csv')
-        self.write_to_file( cos_sims_dif, '1_cos_sims_dif.csv')
-        self.write_to_file( cos_sims_dif, '1_cos_sims_dif_0.05.csv', 0.05)
-        #self.write_to_file( cos_sims_dif, '1_cos_sims_dif_0.1.csv', 0.1)
+        self.write_to_file(cos_sims, 'results/1_cs_23.csv')
+        self.write_to_file(cos_sims_r, 'results/1_cs_r_23.csv')
+        self.write_to_file( cos_sims_dif, 'results/1_cs_dif_23.csv')
+        self.write_to_file( cos_sims_dif, 'results/1_cs_dif_01_23.csv', 0.1)
+        self.write_to_file( cos_sims_dif, 'results/1_cs_dif_02_23.csv', 0.2)
+
 
 
 
@@ -114,7 +116,7 @@ class Trust_script:
         c = conn.cursor()
         return c
 
-    def retrieve_users(self, table, user_level):
+    def retrieve_users(self, table, user_level, statuses_threshold, friends_threshold = 0):
         print ('db:retrieve_users' )
         users = []
         #columns = []
@@ -129,7 +131,7 @@ class Trust_script:
             #columns_name = self.cursor.fetchall()
             #for row in columns_name:
             #        columns.append(row[0])
-            sql = "select distinct id from {0} where level <= {1}".format(table, user_level)
+            sql = "select distinct id from {0} where level <= {1} and statuses_count >= {2} and recorded_friends_count >= {3}".format(table, user_level, statuses_threshold, friends_threshold)
             self.cursor.execute(sql)
             result = self.cursor.fetchall()
             for row in result:
@@ -166,7 +168,7 @@ class Trust_script:
             data_r = np.concatenate((delta_tt[:,i].reshape(delta_tt.shape[0],1), delta_tr[:,i].reshape(delta_tr.shape[0],1)), axis = 1)
             if data.shape[0] < 1:
                 continue
-            if i% 10000 == 0:
+            if i% 1000 == 0:
                 print ( 'i: ', i, ' , ',  data.shape, ' , ', data_r.shape )
             cos_sim.append(sk.cosine_similarity(np.transpose(data))[0][1] )
             cos_sim_r.append(sk.cosine_similarity(np.transpose(data_r))[0][1] )
@@ -175,73 +177,52 @@ class Trust_script:
         return cos_sim , cos_sim_r, order
 
 
-    def friends_lang_avg(self, network , two_hops_users_list, random_friends):
+    def friends_lang_avg(self, network , core_users_list):
         print ( "calculate_friends_avg" )
-        print ( 'len(random_friends): ', len(random_friends) )
-        friends_topics_avg = np.zeros( ( len(two_hops_users_list), self.num_of_topics) )
-        random_topics_avg = np.zeros( ( len(two_hops_users_list), self.num_of_topics) )
-        print ( "len(friends_topics_avg): " , len(friends_topics_avg), ' , ', len(two_hops_users_list) )
-        counter = 0
-        for user_id in two_hops_users_list:
-            if user_id not in random_friends:
-                continue
-            counter +=1
-            user_index = self.all_users_indices[user_id]
-            #print user_index
-            #continue
+        print ( 'len(network): ', len(network) )
+        friends_topics_avg = np.zeros( ( len(core_users_list), self.num_of_topics) )
+        random_topics_avg = np.zeros( ( len(core_users_list), self.num_of_topics) )
+        print ( "len(friends_topics_avg): " , len(friends_topics_avg), ' , ', len(core_users_list) )
 
+        for user_id in core_users_list:
+            if user_id not in network:
+                continue
+            user_index = self.all_users_indices[user_id]
             friends = network[user_id]
             friends_indices = [ self.all_users_indices[fid] for fid in friends]
-            random_indices = random_friends[user_id]
-
             friends_topics_avg[user_index ] = np.mean(self.time_user_topic[2, friends_indices, :], axis = 0)
-            random_topics_avg [user_index] = np.mean(self.time_user_topic[2 , random_indices, : ] , axis = 0)
+        print ('friends_topics_avg.shape: ', friends_topics_avg.shape)
+
+        average = np.mean(self.time_user_topic[2 , : , : ] , axis = 0)
+        for user_id in core_users_list:
+            if user_id not in network:
+                continue
+            user_index = self.all_users_indices[user_id]
+            random_topics_avg [user_index ] = average
+        print ('random_topics_avg.shape: ', random_topics_avg.shape)
 
         return friends_topics_avg, random_topics_avg
 
 
 
-    def random_draw(self, network, two_hops_users_list, three_hops_users_list):
+    def random_draw(self, network, core_users_list, all_users_list):
         print ( 'random_draw' )
-        #df = trust_df[trust_df.num_of_friends > 1]
-        #df = df[np.isfinite(df['diff_score'])]
-        #users_id = df.index.tolist()
-        #num_3hops_users = trust_df.shape[0]
-        #trust_df['avg_friends'] = 0
-        #trust_df['avg_random_people'] = 0
-        #test_k = 0
-        random_friends = {}
-        for user_id in two_hops_users_list:
-            #if test_k < 3:
-            #       print trust_df.loc[user_id]['avg_friends']
-            friends = network[user_id]
-            #friends_value = trust_df.wo_retweets.loc[friends]
-            #friends_avg  = np.mean(friends_value)
-
-            #if friends_avg != friends_avg:
-            #        print 'friends_avg: ' , friends_avg, ' , ', len(friends)
-            #        continue
-            #print 'f-a: ' , friends_avg
-            #trust_df.set_value(user_id, 'avg_friends' , friends_avg )
-            random_indices = random.sample(range(len(three_hops_users_list)), k = len(friends)) #k=int(df.num_of_friends.loc[user_id]) )
-            random_people = [ three_hops_users_list[i] for i in random_indices ]
-            random_friends[user_id] = [ self.all_users_indices[rp] for rp in random_people]
-            #rp_values = trust_df.wo_retweets.loc[random_people]
-            #rp_avg  = np.mean(rp_values)
-            #trust_df.set_value(user_id,'avg_random_people', rp_avg)
-
-        #trust_df['diff_friends'] = trust_df.avg_friends - trust_df.first_part
-        #trust_df['diff_random_people'] = trust_df.avg_random_people - trust_df.first_part
-        return  random_friends
+        random_network = { k : [] for k in core_users_list }
+        for user_id in core_users_list:
+            # friends_count = len(network[user_id])
+            # random_indices = random.sample(range(len(all_users_list)), k = friends_count)
+            # random_network[user_id] = [ all_users_list[i] for i in random_indices ]
+            random_network[user_id] = all_users_list
+        return  random_network
 
 
 
-    def retrieve_network(self, two_hops_users_list, three_hops_users_list):
+    def retrieve_network(self, core_users_list):
         print ("retrieve_network" )
         network = {}
 
-        updated_all_users_list = set(two_hops_users_list)
-        print ('len(updated_all_users_list): ', len(updated_all_users_list) , ' len(two_hops_users_list): ', len(two_hops_users_list))
+        updated_all_users_list = set(core_users_list)
+        print ('len(updated_all_users_list): ', len(updated_all_users_list) , ' len(core_users_list): ', len(core_users_list))
         try:
             self.cursor = self.connectMysqlDB()
         except:
@@ -249,31 +230,26 @@ class Trust_script:
             raise
         if(self.cursor is not None):
             ####  save network as adjacency lists. A dictionary of nodes, in which For each node we keep its neighbors in a list
-            network = { two_hops_users_list[i] : [] for i in range(len(two_hops_users_list))}
+            network = { k : [] for k in core_users_list }
             #### for each node in two hops distance, we fetch its neighbors from db.
-            for i in range(len(two_hops_users_list)):
-                user_id = two_hops_users_list[i]
+            for user_id in core_users_list:
                 sql = "select * from {0} where source_id={1}".format(self.network_table, user_id)
                 self.cursor.execute(sql)
                 result = self.cursor.fetchall()
-                user_index = i
-                ls = []
+                friends = []
                 for row in result:
                     #### only add the neighbors, for which their language info is available
                     if  row[2] in self.all_users_indices:
-                        user2 = self.all_users_indices[row[2]]
-                        #network[user_id].append(row[2])
-                        ls.append(row[2])
-                ls  = random.sample(ls, min(len(ls), 100) )
-                network[user_id] = ls
-                updated_all_users_list = updated_all_users_list.union(set(ls))
+                        friends.append(row[2])
+                # friends  = random.sample(friends, min(len(friends), 100) )
+                network[user_id] = friends
+                updated_all_users_list = updated_all_users_list.union(set(friends))
         print ('len(updated_all_users_list): ', len(updated_all_users_list) )
         return network, list(updated_all_users_list)
 
 
 
-    def retrieve_topics(self, two_hops_users_list, updated_all_users_list):
-
+    def retrieve_topics(self, core_users_list, all_users_list):
         print ("retrieve_topics" )
         try:
             self.cursor = self.connectMysqlDB()
@@ -292,7 +268,7 @@ class Trust_script:
                 for row in result:
                     if not row[0] in words:
                         words.append(row[0])
-                        print ('len(words): ' , len(words) )
+                print ('len(words): ' , len(words) )
 
 
             #### make dictionaries of word to int and the inverse
@@ -308,26 +284,23 @@ class Trust_script:
 
             for i in range(len(self.feat_tables)):
                 print ('i: ' , i)
-                sql = "select * from {0} where group_id in ({1})".format(self.feat_tables[i], ','.join([str(k) for k in updated_all_users_list]) )
+                sql = "select * from {0} where group_id in ({1})".format(self.feat_tables[i], ','.join([str(k) for k in all_users_list]) )
                 self.cursor.execute(sql)
                 result = self.cursor.fetchall()
                 counter = 0
-                ll = len(result)
-                print ('len(result): ', ll)
+                print ('len(result): ', len(result))
                 for row in result:
                     counter+=1
-                    if counter % 1000000 == 0:
-                        print ( 'counter: ' , counter, ' , ', ll )
+                    if counter % 8000000 == 0:
+                        print ( 'counter: ' , counter )
                     #### drop rows that users are not in all_users_indices list
                     if ( row[1] not  in self.all_users_indices ):
                         continue
                     #### for feature tables 0 and 1, drop those rows that users are not in two hops distance
-                    if ( i < 2) and  ( row[1] not in two_hops_users_list):
+                    if ( i < 2) and  ( row[1] not in core_users_list):
                         continue
-                    #print ('row: ', row)
-                    #### fill time_user_topic array. where by 'topic' here we mean 'word'
+                    #### fill time_user_topic array. where by 'topic'/'word'
                     user = self.all_users_indices[row[1]]
-                    #topic = int(row[2])
                     topic = self.word_to_int_dict[row[2]]
                     #print ('i: ', i , ', user: ', user, ' topic: ', topic)
                     self.time_user_topic[i, user, topic] = row[4]
@@ -349,8 +322,7 @@ class Trust_script:
             #for i in delete_list:
             #        print 'delete_list, i:', i ,  ' ,  '
 
-
-
+            '''
             #### normalize data over all users, for each word.
             for k in range(self.time_user_topic.shape[2]):
                 if k in delete_list:
@@ -358,21 +330,22 @@ class Trust_script:
                 for i in range(self.time_user_topic.shape[0]):
                     self.time_user_topic[i,:,k] =   (self.time_user_topic[i,:,k] - average[2,k]) / variance[2,k]
             print (' len(delete_list): ' , len(delete_list) )
+            '''
             return delete_list
 
 
-    def calculate_deltas(self, network, two_hops_users_list, friends_topics_avg, random_topics_avg):
+    def calculate_deltas(self, network, core_users_list, friends_topics_avg, random_topics_avg):
         print ("calculate_deltas" )
         delete_mask = []
-        delta_tt = np.zeros(( len(two_hops_users_list), self.num_of_topics))
-        delta_tf = np.zeros(( len(two_hops_users_list), self.num_of_topics))
-        delta_tr = np.zeros(( len(two_hops_users_list), self.num_of_topics))
-        for user_id in two_hops_users_list:
+        delta_tt = np.zeros(( len(core_users_list), self.num_of_topics))
+        delta_tf = np.zeros(( len(core_users_list), self.num_of_topics))
+        delta_tr = np.zeros(( len(core_users_list), self.num_of_topics))
+        for user_id in core_users_list:
             user_index = self.all_users_indices[user_id]
             delta_tt[user_index] = np.subtract(self.time_user_topic[1,user_index,:] , self.time_user_topic[0,user_index,:] )
             delta_tf[user_index] = np.subtract(friends_topics_avg[user_index] , self.time_user_topic[0,user_index,:] )
             delta_tr[user_index] = np.subtract(random_topics_avg[user_index] , self.time_user_topic[0,user_index, :] )
-            if len(network[user_id]) < 6:
+            if len(network[user_id]) < 10:
                     delete_mask.append(user_index)
         print ('shapes: ' )
         print (delta_tt.shape )
@@ -382,7 +355,7 @@ class Trust_script:
         delta_tt = np.delete(delta_tt, delete_mask, 0)
         delta_tf = np.delete(delta_tf, delete_mask, 0)
         delta_tr = np.delete(delta_tr, delete_mask, 0)
-        print ("mask_len: " , len(delete_mask) )
+        print ("len(delete_mask): " , len(delete_mask) )
 
         print ("self.delta_tt.shape: ", delta_tt.shape )
         print ("self.delta_tf.shape: ", delta_tf.shape )
