@@ -4,10 +4,11 @@ set -v
 #export PYSPARK_PYTHON=/opt/app/anaconda2/python27/bin/python;
 export SPARK_HOME=/opt/mapr/spark/spark-2.0.1/
 export PYSPARK_PYTHON=python2.7
+export PYTHONPATH=.
 
 #hadoop fs -get $2/files/* .
 
-~/../../opt/mapr/spark/spark-2.0.1/bin/spark-submit\
+~/../../../opt/mapr/spark/spark-2.0.1/bin/spark-submit \
 --master yarn \
 --deploy-mode client \
 --executor-memory 4g \
