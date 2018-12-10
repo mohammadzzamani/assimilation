@@ -4,6 +4,9 @@ from pyspark.sql import DataFrame
 import constants as c
 import os
 
+
+GZIP = 'gzip'
+SNAPPY = 'snappy'
 topic_table = 'feat.2000fb.msg_1001_nrt.userid_week'
 ngram_table = 'feat.1gram.msg_1001_nrt_small.userid_week'
 accounts_table = 'twitter_accounts_1001_uniques.csv'
@@ -33,7 +36,7 @@ def read_data_frame(file_name, schema=None, has_header='false', delimiter=',', c
     global sc
     if schema is None:
         if compress:
-            assert compress in [c.GZIP, c.SNAPPY]
+            assert compress in [GZIP, SNAPPY]
             df = sc.read \
                 .format('com.databricks.spark.csv') \
                 .options(header='true', inferschema='true', delimiter=delimiter, codec=compress) \
@@ -45,7 +48,7 @@ def read_data_frame(file_name, schema=None, has_header='false', delimiter=',', c
                 .load(file_name)
     else:
         if compress:
-            assert compress in [c.GZIP, c.SNAPPY]
+            assert compress in [GZIP, SNAPPY]
             df = sc.read \
                 .format('com.databricks.spark.csv') \
                 .options(header=has_header, inferschema='false', delimiter=delimiter, codec=compress) \
@@ -73,7 +76,7 @@ def write_data_frame(df, output_path, delimiter=',', repartition=None, coalesce=
     df.cache()
 
     if compress:
-        assert compress in [c.GZIP, c.SNAPPY]
+        assert compress in [GZIP, SNAPPY]
         df.write \
             .options(header='true', delimiter=delimiter) \
             .option("codec", compress) \
@@ -88,6 +91,7 @@ def write_data_frame(df, output_path, delimiter=',', repartition=None, coalesce=
             .save(output_path)
 
 def run_command(cmd):
+    print ('run_command: ', cmd)
     """Return (status, output) of executing cmd in a shell."""
     pipe = os.popen('{ ' + cmd + '; } 2>&1', 'r')
     # text = pipe.read()
