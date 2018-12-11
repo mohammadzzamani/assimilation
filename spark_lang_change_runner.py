@@ -1,7 +1,7 @@
 from pyspark.sql.types import StructType, StructField, StringType
 from pyspark import SparkConf, SparkContext, SQLContext
 from pyspark.sql import DataFrame
-import constants as c
+# import constants as c
 import os
 
 
