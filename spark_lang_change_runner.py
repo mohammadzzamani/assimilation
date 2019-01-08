@@ -1,6 +1,7 @@
 from pyspark.sql.types import StructType, StructField, StringType
 from pyspark import SparkConf, SparkContext, SQLContext
 from pyspark.sql import DataFrame
+from pyspark.sql.functions import first
 # import constants as c
 import os
 
@@ -8,10 +9,11 @@ import os
 GZIP = 'gzip'
 SNAPPY = 'snappy'
 ROOT_DIR = '/user/mzamani/'
-topics_table = 'feat.2000fb.msg_1001_nrt.userid_week'
+topics_table = 'feat.2000fb.msg_1001_nrt_small.userid_week'
 ngrams_table = 'feat.1gram.msg_1001_nrt_small.userid_week'
 accounts_table = 'twitter_accounts_1001_uniques'
 network_table = 'twitter_network_1001'
+core_users_weeks_table = 'core_users_weeks'
 
 def build_spark_context_cluster(app_name):
     global sc
@@ -133,6 +135,14 @@ if __name__ == "__main__":
     accounts_df.cache()
     accounts_df.show()
 
+    print ('core_users_weeks_df: ')
+    core_users_weeks_schema = StructType([StructField(field, StringType(), True) for field in
+                                  ["user_id","_min","_tercile1","_mean","_tercile2","_max","week_min",
+                                   "week_tercile1","week_mean","week_tercile2","week_max"]])
+    core_users_weeks_df = read_data_frame(file_name=ROOT_DIR + core_users_weeks_table, schema=core_users_weeks_schema, compress = 'gzip' )
+    core_users_weeks_df.cache()
+    core_users_weeks_df.show()
+
     print ('network_df: ')
     network_schema = StructType([StructField(field, StringType(), True) for field in
                                   ["counter","source_id","dest_id","likes","mentions","retweets","friends_since"] ])
@@ -140,6 +150,35 @@ if __name__ == "__main__":
     network_df.cache()
     network_df.show()
     ####
+
+
+    #### select two and three hops users
+    three_hops_users = accounts_df.where(accounts_df.level == 3)
+    three_hops_users_list  = [int(row.id) for row in three_hops_users.collect()]
+    two_hops_users = accounts_df.where(accounts_df.level == 2)
+    two_hops_users_list  = [int(row.id) for row in two_hops_users.collect()]
+    print ('three_hops_users: ')
+    print (three_hops_users.show())
+    print (three_hops_users.count())
+
+
+
+    #### dictionary of user_index to int index
+    all_users_indices = { two_hops_users_list[i] : i for i in range(len(two_hops_users_list)) }
+    print ('(len(self.all_users_indices): ', len(all_users_indices ))
+    for uid in  three_hops_users_list:
+            if uid not in two_hops_users_list:
+                    all_users_indices[uid] = len(all_users_indices)
+    print ('(len(self.all_users_indices): ', len(all_users_indices ))
+
+
+
+    topics_df = topics_df.select(['group_id', 'feat', 'group_norm'])
+    topics_pivoted_df = topics_df.groupby(topics_df.id).pivot("feat").agg(first("group_norm"))
+    print ('topics_pivoted_df:')
+    topics_pivoted_df.show(n=1)
+
+
 
 
     #### write dataframe to hadoop storage

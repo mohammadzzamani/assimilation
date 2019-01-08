@@ -75,3 +75,22 @@ insert into  twitter_messagesEn_1001_nrt_friends_ select m.* , n.source_id as pa
 -----
 
 
+create table messagesEn_1001_nrt_core_sorted like messagesEn_1001_nrt_core;
+alter table messagesEn_1001_nrt_core_sorted add column position int;
+insert into messagesEn_1001_nrt_core_sorted ( select t.* , @rownum := @rownum + 1 as position  from messagesEn_1001_nrt_core t join ( select @rownum := 0) r order by user_id, created_at ) ;
+
+create table core_users_weeks ( user_id varchar(45) primary key , _min int , _tercile1 int, _mean int, _tercile2 int, _max int, week_min int , week_tercile1 int, week_mean int, week_tercile2 int, week_max int );
+insert into core_users_weeks (user_id, _min, _max)  (select s.user_id, min(s.position) as min_ , max(s.position) as max_  from ( select message_id, message, user_id, created_at, @rownum := @rownum + 1 as position from messagesEn_1001_nrt_core t join ( select @rownum := 0) r order by user_id, message_id ) s group by s.user_id) ;
+update core_users_weeks set _tercile1 = floor((_min * 2.0  + _max * 1.0 )/ 3.0)  , _tercile2 = floor(( _min * 1.0  + _max * 2.0 )/ 3.0 ) , _mean = floor((_min * 1.0  + _max * 1.0 )/ 2.0);
+
+update core_users_weeks w join messagesEn_1001_nrt_core_sorted s on w.user_id = s.user_id and w._min = s.position set week_min = ROUND(DATEDIFF(created_at, '2006-01-01')/7, 0) ;
+update core_users_weeks w join messagesEn_1001_nrt_core_sorted s on w.user_id = s.user_id and w._max = s.position set week_max = ROUND(DATEDIFF(created_at, '2006-01-01')/7, 0) ;
+update core_users_weeks w join messagesEn_1001_nrt_core_sorted s on w.user_id = s.user_id and w._tercile1 = s.position set week_tercile1 = ROUND(DATEDIFF(created_at, '2006-01-01')/7, 0) ;
+update core_users_weeks w join messagesEn_1001_nrt_core_sorted s on w.user_id = s.user_id and w._tercile2 = s.position set week_tercile2 = ROUND(DATEDIFF(created_at, '2006-01-01')/7, 0) ;
+update core_users_weeks w join messagesEn_1001_nrt_core_sorted s on w.user_id = s.user_id and w._mean = s.position set week_mean = ROUND(DATEDIFF(created_at, '2006-01-01')/7, 0) ;
+
+
+select * ,   ROUND(DATEDIFF(created_at, '2006-01-01')/7, 0)  as week_min  from  core_users_weeks w join messagesEn_1001_nrt_core_sorted s on w.user_id = s.user_id and w._min = s.position  ;
+
+
+
