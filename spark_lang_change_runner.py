@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
 
     topics_df = topics_df.select(['group_id', 'feat', 'group_norm'])
-    topics_pivoted_df = topics_df.groupby(topics_df.id).pivot("feat").agg(first("group_norm"))
+    topics_pivoted_df = topics_df.groupby(topics_df.group_id).pivot("feat").agg(first("group_norm"))
     print ('topics_pivoted_df:')
     topics_pivoted_df.show(n=1)
 
