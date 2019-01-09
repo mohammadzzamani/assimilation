@@ -1,7 +1,7 @@
 from pyspark.sql.types import StructType, StructField, StringType
 from pyspark import SparkConf, SparkContext, SQLContext
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import first
+from pyspark.sql.functions import first, split
 # import constants as c
 import os
 
@@ -175,8 +175,13 @@ if __name__ == "__main__":
 
     topics_df = topics_df.select(['group_id', 'feat', 'group_norm'])
     topics_pivoted_df = topics_df.groupby(topics_df.group_id).pivot("feat").agg(first("group_norm"))
+    split_groupid_col = split(topics_pivoted_df['group_id'], '_')
+    topics_pivoted_df = topics_pivoted_df.withColumn('id_only', split_groupid_col.getItem(0)).withColumn('week_only', split_groupid_col.getItem(1))
     print ('topics_pivoted_df:')
     topics_pivoted_df.show(n=1)
+
+
+
 
 
 
