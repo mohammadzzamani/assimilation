@@ -180,6 +180,19 @@ if __name__ == "__main__":
     print ('topics_pivoted_df:')
     topics_pivoted_df.show(n=1)
 
+    #### write topics_pivoted_df dataframe to hadoop storage
+    output_dir = ROOT_DIR + 'data_dir/'
+    full_output_path = output_dir + 'topics_pivoted_df'
+    run_command('hadoop fs -mkdir -p %s' % output_dir)
+    run_command('hadoop fs -rm -r -skipTrash %s' % full_output_path)
+    write_data_frame(topics_pivoted_df, full_output_path, repartition=100, compress=None)
+
+    topics_columns_file = open('~/assimilation/data_dir/topics_columns.txt')
+    topics_columns_file.write(topics_pivoted_df.columns)
+
+
+
+
 
 
 
