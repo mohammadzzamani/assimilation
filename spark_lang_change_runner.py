@@ -1,7 +1,7 @@
 from pyspark.sql.types import StructType, StructField, StringType
 from pyspark import SparkConf, SparkContext, SQLContext
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import first, split
+from pyspark.sql.functions import first, split, col
 # import constants as c
 import os
 
@@ -70,7 +70,7 @@ def read_data_frame(file_name, schema=None, has_header='false', delimiter=',', c
     df = df.repartition(100)
     return df
 
-def write_data_frame(df, output_path, delimiter=',', repartition=None, coalesce=None, compress=None):
+def write_data_frame(df, output_path, delimiter=',', repartition=None, coalesce=None, compress=None, show_schema=True):
     global sc
     if repartition is not None:
         df = df.repartition(repartition)
@@ -78,8 +78,9 @@ def write_data_frame(df, output_path, delimiter=',', repartition=None, coalesce=
         df = df.coalesce(coalesce)
     df.cache()
 
-    print ('df.schema: ')
-    df.printSchema()
+    if show_schema:
+        print ('df.schema: ')
+        df.printSchema()
 
     if compress:
         assert compress in [GZIP, SNAPPY]
@@ -107,24 +108,17 @@ def run_command(cmd):
     # return sts, text
 
 
+def read_input():
 
-if __name__ == "__main__":
-    global sc
-    sc = build_spark_context_cluster( 'running my bundle' )
-
-
-    #### read topics_df, accounts_df, and network_df:
     print ('topics_df: ')
     topics_schema = StructType([StructField(field, StringType(), True) for field in
                                 ['group_id', 'feat', 'value', 'group_norm']])
     topics_df = read_data_frame(file_name=ROOT_DIR + topics_table, schema=topics_schema, compress = 'gzip' )
     topics_df.cache()
-    # topics_df.show()
 
     print ('ngrams_df: ')
     ngrams_df = read_data_frame(file_name=ROOT_DIR + ngrams_table, schema=topics_schema, compress = 'gzip' )
     ngrams_df.cache()
-    # topics_df.show()
 
     print ('accounts_df: ')
     accounts_schema = StructType([StructField(field, StringType(), True) for field in
@@ -149,10 +143,22 @@ if __name__ == "__main__":
     network_df = read_data_frame(file_name=ROOT_DIR + network_table, schema=network_schema, compress = 'gzip' )
     network_df.cache()
     network_df.show()
-    ####
+
+    return topics_df, ngrams_df, accounts_df, core_users_weeks_df, network_df
 
 
-    #### select two and three hops users
+
+if __name__ == "__main__":
+    global sc
+    sc = build_spark_context_cluster( 'running my bundle' )
+
+
+    ######## read topics_df, ngrams_df, accounts_df, core_users_weeks_df, network_df
+    topics_df, ngrams_df, accounts_df, core_users_weeks_df, network_df = read_input()
+
+
+
+    ######## select two and three hops users
     three_hops_users = accounts_df.where(accounts_df.level == 3)
     three_hops_users_list  = [int(row.id) for row in three_hops_users.collect()]
     two_hops_users = accounts_df.where(accounts_df.level == 2)
@@ -163,7 +169,7 @@ if __name__ == "__main__":
 
 
 
-    #### dictionary of user_index to int index
+    ######## building  all_users_indices dictionary: {userid: int index}
     all_users_indices = { two_hops_users_list[i] : i for i in range(len(two_hops_users_list)) }
     print ('(len(self.all_users_indices): ', len(all_users_indices ))
     for uid in  three_hops_users_list:
@@ -173,6 +179,7 @@ if __name__ == "__main__":
 
 
 
+    ######## split userid_week into two columns in topics_df
     topics_df = topics_df.select(['group_id', 'feat', 'group_norm'])
     topics_pivoted_df = topics_df.groupby(topics_df.group_id).pivot("feat").agg(first("group_norm"))
     split_groupid_col = split(topics_pivoted_df['group_id'], '_')
@@ -180,26 +187,33 @@ if __name__ == "__main__":
     print ('topics_pivoted_df:')
     topics_pivoted_df.show(n=1)
 
+
+
     #### write topics_pivoted_df dataframe to hadoop storage
     output_dir = ROOT_DIR + 'data_dir/'
     full_output_path = output_dir + 'topics_pivoted_df'
     run_command('hadoop fs -mkdir -p %s' % output_dir)
     run_command('hadoop fs -rm -r -skipTrash %s' % full_output_path)
-    write_data_frame(topics_pivoted_df, full_output_path, repartition=100, compress=None)
+    write_data_frame(topics_pivoted_df, full_output_path, repartition=100, compress=None, show_schema=False)
+    print ('topics_pivoted_df.count: ', topics_pivoted_df.count())
 
+    ######## store topics_pivoted_df schema in a file
     topics_columns_file = open('~/assimilation/data_dir/topics_columns.txt')
     topics_columns_file.write(topics_pivoted_df.columns)
 
 
+    topics_pivoted_df = topics_pivoted_df.alias('a').join(core_users_weeks_df.alias('b'), col('a.id_only') == col('b.user_id') ).\
+        select([col('a.'+c) for c in topics_pivoted_df.columns] + [col('b.week_mean')])
+    print ('topics_pivoted_df.columns: ', topics_pivoted_df.columns)
+
+    topics_first_df = topics_pivoted_df.where(col('week_only') < col('week_mean'))
+    topics_last_df = topics_pivoted_df.where(col('week_only') >= col('week_mean'))
 
 
 
 
 
-
-
-
-    #### write dataframe to hadoop storage
+    #### write a dataframe to hadoop storage
     output_dir = ROOT_DIR + 'test_dir/'
     full_output_path = output_dir + 'test2'
     run_command('hadoop fs -mkdir -p %s' % output_dir)

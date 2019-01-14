@@ -11,8 +11,9 @@ export PYTHONPATH=.
 ~/../../../opt/mapr/spark/spark-2.0.1/bin/spark-submit \
 --master yarn \
 --deploy-mode client \
---executor-memory 4g \
---driver-memory 5g \
+--executor-memory 10g \
+--driver-memory 10g \
+--conf spark.yarn.executor.memoryOverhead=600 \
 --jars ~/hadoopPERMA/jars/hadoop-lzo-0.4.21-SNAPSHOT.jar \
 spark_lang_change_runner.py
 
