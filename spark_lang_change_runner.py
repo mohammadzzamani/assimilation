@@ -194,8 +194,11 @@ if __name__ == "__main__":
     full_output_path = output_dir + 'topics_pivoted_df'
     run_command('hadoop fs -mkdir -p %s' % output_dir)
     run_command('hadoop fs -rm -r -skipTrash %s' % full_output_path)
-    write_data_frame(topics_pivoted_df, full_output_path, repartition=100, compress=None, show_schema=False)
     print ('topics_pivoted_df.count: ', topics_pivoted_df.count())
+    topics_pivoted_df = topics_pivoted_df.sample(False,0.1, 42)
+    print ('topics_pivoted_df.count after sampling: ', topics_pivoted_df.count())
+    write_data_frame(topics_pivoted_df, full_output_path, repartition=100, compress=None, show_schema=False)
+
 
     ######## store topics_pivoted_df schema in a file
     topics_columns_file = open('~/assimilation/data_dir/topics_columns.txt')
