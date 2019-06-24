@@ -3,6 +3,8 @@ import numpy as np
 from functools import partial
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+from happierfuntokenizing.happierfuntokenizing import Tokenizer
+tokenizer = Tokenizer()
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
@@ -10,8 +12,17 @@ root_dir='/Users/Mz/Downloads/assimilation/'
 results_sub_dir = 'results_0619/'
 big5_filename = 'big5.csv'
 message_filename='message_topics.csv'
-message_stats_filename='message_stats.csv'
-
+# message_stats_filename='message_stats.csv'
+message_stats_filename='message_stats_200.csv'
+stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself', 'yourselves',
+              'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their',
+              'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
+              'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an',
+              'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about',
+              'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up',
+              'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when',
+              'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor',
+              'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now']
 
 contagious_type = ['inf', 'match']
 network = ['0', '1', '6']
@@ -72,21 +83,28 @@ def read_data():
 
     return data
 
+def get_tokens(desc):
+    return [ word for word in tokenizer.tokenize( desc ) if word not in stopwords ]
+
 def read_message_data():
     topics = pd.read_csv(root_dir+results_sub_dir+message_filename)
     stats = pd.read_csv(root_dir+results_sub_dir+message_stats_filename)
+    topics_cp_filename = 'topics_cp.csv'
+    topics_cp = pd.read_csv(root_dir+results_sub_dir+topics_cp_filename)
+    stats['words'] = stats['message'].apply( partial( get_tokens))
     # print topics.columns
     # print topics.shape
     # print stats.columns
     # print stats.shape
-    return topics, stats
+    return topics, stats, topics_cp
 
 def calc_contagious_score(data):
     def func_calc_score(row, cols):
         suffix = '_inf0'
-        # [ angle_fr, angle_lf, angle_lr]  = [ np.arccos(row[csim+suffix])/np.pi for csim in ['csim_fr', 'csim_lf', 'csim_lr'] ]
-        # score =  angle_lr / angle_lf
-        score = row['dot_lf'+suffix] / row['dot_lr'+suffix]
+        [ angle_fr, angle_lf, angle_lr]  = [ np.arccos(row[csim+suffix])/np.pi for csim in ['dot_fr', 'dot_lf', 'dot_lr'] ]
+        score =  angle_lr / angle_lf
+        # score = row['csim_lf'+suffix]
+        score = row['csim_lf'+suffix] / row['csim_lr'+suffix]
         return score
     columns = list(data.columns.values)
     data['score'] = data.apply(partial(func_calc_score, cols=columns) , axis=1)
@@ -216,6 +234,163 @@ def calc_message_score(topics, data, stats):
     return X, Y
 
 
+
+
+def calc_message_score2(topics_cp, data, stats):
+    print 'calc_message_score2...'
+    def message_score(message, words_score):
+        try:
+            vals = []
+            val = 0
+            count = 0
+            for word in message:
+                # val += words_score.loc[(words_score['term'] == word)]['word_score']
+                # print words_score.loc[word]
+                # print word in words_score.index
+                if word in words_score.index:
+                    # vals.append(words_score.loc[word].values[0])
+                    val += words_score.loc[word].values[0]
+                    count+=1
+        except:
+            print '-----error-----'
+            print type(message)
+        # vals = sorted(vals)
+        # val = np.sum(vals[-5:])
+        return val #*1.0/count if count != 0 else 0
+    topics_cp = pd.merge(topics_cp, data, left_on=['category'], right_on=['topic'], how='inner')
+    topics_cp['word_score'] = topics_cp['weight'] * topics_cp['score']
+    top10_scores = topics_cp.sort_values(['term','word_score'],ascending=False).groupby('term').head(20)
+    print top10_scores.shape
+    print top10_scores[:20][['term','word_score']]
+    words_score = top10_scores.groupby(['term'])[['word_score']].sum()/20
+    # words_score.reset_index(inplace=True)
+    print '====='
+    # print len(list(topics_cp.term.unique()))
+    print words_score.shape
+    stats['message_score'] = stats['words'].apply(partial(message_score, words_score=words_score))
+
+    # print 'stats:'
+    # print stats[:10]
+
+    print stats.columns
+    print topics_cp.columns
+    print data.columns
+    # return
+
+
+
+    # data.reset_index(inplace=True)
+    #
+    # print 'topics.columns: ', topics.columns
+    # print 'topics.shape: ', topics.shape
+    # data.reset_index(inplace=True)
+    # # all_df = pd.merge(topics, data, left_on=['feat'], right_on=['topic'], how='inner')
+    # # print 'all_df.columns: ', all_df.columns
+    # # print 'all_df.shape: ', all_df.shape
+    # all_df = pd.merge(data, stats, left_on=['group_id'], right_on=['message_id'], how='inner')
+    # print 'all_df.columns: ', all_df.columns
+    # print 'all_df.shape: ', all_df.shape
+
+
+
+    #data.reset_index(inplace=True)
+    # #topics = pd.merge(topics, data, left_on=['feat'], right_on=['topic'], how='inner')
+    # all_df['score_gn'] = all_df['score'] * all_df['group_norm']
+    #print topics[:10][['id', 'group_id', 'score', 'score_gn', 'group_norm']]
+    # msg_df = stats.groupby(['message_id', 'user_id','retweet_count' , 'favorite_count'])[['message_score']].sum()
+    # msg_df.columns = ['msg_score_sum']
+    # #print sum_[:5]
+    # msg_df['msg_score_mean']= all_df.groupby(['group_id', 'user_id', 'retweet_count' , 'favorite_count'])[['score_gn']].mean()
+    # #print sum_[:5]
+    # # msg_df['count']= all_df.groupby(['group_id', 'user_id'])[['score_gn']].count()
+    # # #print sum_[:5]
+    # msg_df['msg_score_max']= all_df.groupby(['group_id', 'user_id', 'retweet_count' , 'favorite_count'])[['score_gn']].max()
+    # # #print sum_[:5]
+    # # msg_df['min']= all_df.groupby(['group_id', 'user_id'])[['score_gn']].min()
+    # msg_df.reset_index(inplace=True)
+    # print msg_df.columns
+    #msg_df.columns = ['group_id' ,'user_id', 'msg_score_sum' , 'msg_score_mean'] #, 'msg_score_count', 'msg_score_max' , 'msg_score_min']
+
+    # print msg_df.columns
+    # print 'msg_df: '
+    # print msg_df[:5]
+
+
+    user_df= stats.groupby(['user_id'])[['retweet_count']].mean()
+    user_df['favorite'] = stats.groupby(['user_id'])[['favorite_count']].mean()
+    user_df['count'] = stats.groupby(['user_id'])[['favorite_count']].count()
+    user_df.columns = ['user_retweet', 'user_favorite', 'user_count']
+    print ('user_df:')
+    print user_df[:5]
+
+
+    print stats[:10]
+    # temp = msg_df.groupby(['group_id', 'user_id'])[['score_gn']].sum()
+    user_df['user_score'] = stats.groupby(['user_id'])[['message_score']].mean()
+    user_df.reset_index(inplace=True)
+
+    print ">>>>>"
+    print user_df.columns
+    print stats.columns
+    print user_df.shape
+    print stats.shape
+    print ">>>>>"
+    # print user_df[:10]
+    # print msg_df[:10]
+
+
+
+    msg_df  = pd.merge(stats, user_df, left_on=['user_id'], right_on=['user_id'], how='inner')
+    print msg_df.columns
+    print msg_df.shape
+    print msg_df[[ 'message_score', 'user_score']][:10]
+    #print sum_[:5]
+    msg_df['message_score_dif'] = msg_df['message_score'] - msg_df['user_score']
+    msg_df['retweet_dif'] = msg_df['retweet_count'] - msg_df['user_retweet']
+    msg_df['favorite_dif'] = msg_df['favorite_count'] - msg_df['user_favorite']
+    print "-------"
+    print msg_df[[ 'message_score_dif', 'message_score', 'user_score']][:10]
+    print "-------"
+    print msg_df.corr(method='spearman')[[ 'message_score_dif', 'message_score', 'user_score']]
+    print "=========="
+
+    # p1 = sum_.loc[sum_['user_id'] == 10870512]
+    # print p1.shape
+    # print p1.corr(method='spearman')[[ 'score_gn_dif']]
+    # print p1[[ 'user_id',  'score_gn_x', 'score_gn_y', 'score_gn_dif', 'retweet_count', 'favorite_count' ]][:20]
+    # p1 = sum_.loc[sum_['user_id'] == 12369372]
+    # print p1.shape
+    # print p1.corr(method='spearman')[['score_gn_dif']]
+    # print p1[[ 'user_id',  'score_gn_x', 'score_gn_y', 'score_gn_dif', 'retweet_count', 'favorite_count' ]][:20]
+    # p1 = sum_.loc[sum_['user_id'] == 13884162]
+    # print p1.shape
+    # print p1.corr(method='spearman')[['score_gn_dif']]
+    # print p1[[ 'user_id',  'score_gn_x', 'score_gn_y', 'score_gn_dif', 'retweet_count', 'favorite_count' ]][:20]
+
+    users = list(user_df.user_id.unique())
+    scores = []
+    for u in users:
+        person = msg_df.loc[msg_df['user_id'] == u]
+        #print type( p1.corr(method='spearman') )
+        #print p1.corr(method='spearman')[['score_gn_dif']]
+        # scores.append(person.corr(method='spearman')['retweet_count'][['msg_score_dif']].values )
+        X = person[[ 'message_score_dif', 'user_score' ]]
+        Y = person[['retweet_dif', 'favorite_dif']]
+        scores.append(person.corr(method='spearman')['retweet_dif'][['message_score_dif']].values[0] )
+        # scores.append(learn(X.values, Y.values))
+        # if person.corr(method='spearman')['favorite_dif'][['message_score_dif']].values[0] is :
+        print u, ' --- ', person.corr(method='spearman')['favorite_dif'][['message_score_dif']].values[0] , \
+            ' ---- ', person.corr(method='spearman')['retweet_dif'][['message_score_dif']].values[0]
+        # if u == 1000774783:
+        #     print 'person: ', person
+    print scores
+    print 'mean: ' , np.mean(scores)
+
+    X = msg_df[['message_id' , 'message_score_dif', 'user_score', 'user_retweet', 'user_favorite' ]]
+    Y = msg_df[['retweet_count', 'favorite_count']]
+    return X, Y
+
+
 def learn(X, Y):
     print 'learn...'
     print X.shape, ' , ', Y.shape
@@ -236,28 +411,28 @@ def learn(X, Y):
     rmse2 = np.sqrt(mean_squared_error(y, ypred2))
     print 'rmse: ', rmse2
 
-    x = X[:,3:]
-    y = Y[:,0]
-    reg = LinearRegression().fit(x, y) #max_iter=100, tol=1e-4)
-    reg.fit(x, y)
-    ypred = reg.predict(x)
-    rmse3 = np.sqrt(mean_squared_error(y, ypred))
-    print 'rmse: ', rmse3
-    # print 'coef: ', reg.coef_, ' , ', reg.intercept_
+    # x = X[:,3:]
+    # y = Y[:,0]
+    # reg = LinearRegression().fit(x, y) #max_iter=100, tol=1e-4)
+    # reg.fit(x, y)
+    # ypred = reg.predict(x)
+    # rmse3 = np.sqrt(mean_squared_error(y, ypred))
+    # print 'rmse: ', rmse3
+    # # print 'coef: ', reg.coef_, ' , ', reg.intercept_
     print '----'
 
-    return rmse1 - rmse3
+    return rmse1 - rmse2
 
 data = read_data()
-topics, stats = read_message_data()
+topics, stats, topics_cp = read_message_data()
 
 data = calc_contagious_score(data)
 
 calc_big5_corr(data)
 
-X, Y = calc_message_score(topics, data, stats)
+X, Y = calc_message_score2(topics_cp, data, stats)
 
-# learn(X.values, Y.values)
+learn(X.values, Y.values)
 
 
 
