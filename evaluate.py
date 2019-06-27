@@ -1,3 +1,5 @@
+from random import random
+
 import pandas as pd
 import numpy as np
 from functools import partial
@@ -13,7 +15,7 @@ results_sub_dir = 'results_0619/'
 big5_filename = 'big5.csv'
 message_filename='message_topics.csv'
 # message_stats_filename='message_stats.csv'
-message_stats_filename='message_stats_200.csv'
+message_stats_filename='message_stats_all.csv'
 stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself', 'yourselves',
               'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their',
               'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
@@ -41,6 +43,7 @@ def read_data():
     for c in contagious_type:
         for n in network:
             filename=prefix+ c + '_'+ n + suffix
+            filename=prefix+ n+'_'+c + suffix
             try:
                 d = pd.read_csv(root_dir+results_sub_dir+filename)
                 d.set_index('topic', inplace=True)
@@ -93,24 +96,30 @@ def read_message_data():
     topics_cp = pd.read_csv(root_dir+results_sub_dir+topics_cp_filename)
     stats['words'] = stats['message'].apply( partial( get_tokens))
     # print topics.columns
-    # print topics.shape
+    print 'shapes: '
+    print topics.shape
     # print stats.columns
-    # print stats.shape
+    print stats.shape
     return topics, stats, topics_cp
 
 def calc_contagious_score(data):
+    print 'calc_contagious_score...'
     def func_calc_score(row, cols):
         suffix = '_inf0'
-        [ angle_fr, angle_lf, angle_lr]  = [ np.arccos(row[csim+suffix])/np.pi for csim in ['dot_fr', 'dot_lf', 'dot_lr'] ]
+        [ angle_fr, angle_lf, angle_lr]  = [ np.arccos(row[csim+suffix])/np.pi for csim in ['csim_fr', 'csim_lf', 'csim_lr'] ]
         score =  angle_lr / angle_lf
         # score = row['csim_lf'+suffix]
-        score = row['csim_lf'+suffix] / row['csim_lr'+suffix]
+        score = row['csim_lf'+suffix] - row['csim_lr'+suffix]
+        # if score >= 0.1499:
+        #     print 'row: ', row
         return score
     columns = list(data.columns.values)
+    # data['score'] = data.apply(lambda x: random())
     data['score'] = data.apply(partial(func_calc_score, cols=columns) , axis=1)
     data['score_rank'] = data['score'].rank(ascending=False)
     data.sort_values(by=['score'], inplace=True, ascending=False)
-    #print data[:10]
+    print data.score[:10]
+    print data.score[-10:]
     return data
 
 def calc_big5_corr(data):
@@ -234,7 +243,7 @@ def calc_message_score(topics, data, stats):
     return X, Y
 
 
-
+global_counter = 0
 
 def calc_message_score2(topics_cp, data, stats):
     print 'calc_message_score2...'
@@ -248,25 +257,47 @@ def calc_message_score2(topics_cp, data, stats):
                 # print words_score.loc[word]
                 # print word in words_score.index
                 if word in words_score.index:
-                    # vals.append(words_score.loc[word].values[0])
+                    vals.append(words_score.loc[word].values[0])
                     val += words_score.loc[word].values[0]
                     count+=1
         except:
             print '-----error-----'
             print type(message)
-        # vals = sorted(vals)
-        # val = np.sum(vals[-5:])
-        return val #*1.0/count if count != 0 else 0
+        vals = sorted(vals)
+        val = np.sum(vals[-4:])
+        count = min(2, max(count, 1))
+        # return val  *1.0/count
+        if len(vals) == 0:
+            global global_counter
+            global_counter +=1
+            if global_counter % 100 == 1:
+                print global_counter
+
+        return vals[-5] if len(vals) > 5 else vals[-len(vals)] if len(vals) > 0 else 0
     topics_cp = pd.merge(topics_cp, data, left_on=['category'], right_on=['topic'], how='inner')
-    topics_cp['word_score'] = topics_cp['weight'] * topics_cp['score']
-    top10_scores = topics_cp.sort_values(['term','word_score'],ascending=False).groupby('term').head(20)
+    topics_cp['word_score'] =  topics_cp['score'] * topics_cp['weight']
+    # topics_1751= topics_cp[topics_cp['category']==1751]
+    print topics_cp.columns
+    topics_cp.sort_values(['term'], inplace=True)
+    print  topics_cp[['id', 'term', 'category', 'word_score', 'weight', 'score']][:10]
+    top10_scores = topics_cp.sort_values(['term','weight'],ascending=False).groupby('term').head(2)
+    # print "______"
+    # print top10_scores[:10]
+
+
+    #df.groupby(['Mt'])['count'].transform(max) == df['count']
+
     print top10_scores.shape
     print top10_scores[:20][['term','word_score']]
-    words_score = top10_scores.groupby(['term'])[['word_score']].sum()/20
+    words_score = top10_scores.groupby(['term'])[['word_score']].mean()
+    words_score.sort_values(['word_score'], ascending=False, inplace=True)
+    print words_score[:10]
+    print words_score[-10:]
     # words_score.reset_index(inplace=True)
     print '====='
     # print len(list(topics_cp.term.unique()))
     print words_score.shape
+    print stats.shape
     stats['message_score'] = stats['words'].apply(partial(message_score, words_score=words_score))
 
     # print 'stats:'
@@ -339,8 +370,9 @@ def calc_message_score2(topics_cp, data, stats):
     # print msg_df[:10]
 
 
-
+    stats['word_count'] = stats.words.apply(lambda x: len(x))
     msg_df  = pd.merge(stats, user_df, left_on=['user_id'], right_on=['user_id'], how='inner')
+    msg_df['fav_ret'] = msg_df['favorite_count'] + msg_df['retweet_count']
     print msg_df.columns
     print msg_df.shape
     print msg_df[[ 'message_score', 'user_score']][:10]
@@ -349,9 +381,9 @@ def calc_message_score2(topics_cp, data, stats):
     msg_df['retweet_dif'] = msg_df['retweet_count'] - msg_df['user_retweet']
     msg_df['favorite_dif'] = msg_df['favorite_count'] - msg_df['user_favorite']
     print "-------"
-    print msg_df[[ 'message_score_dif', 'message_score', 'user_score']][:10]
+    print msg_df[[ 'message_score_dif', 'message_score', 'user_score', 'word_count']][:10]
     print "-------"
-    print msg_df.corr(method='spearman')[[ 'message_score_dif', 'message_score', 'user_score']]
+    print msg_df.corr(method='spearman')[[ 'message_score_dif', 'message_score', 'user_score', 'word_count']]
     print "=========="
 
     # p1 = sum_.loc[sum_['user_id'] == 10870512]
@@ -369,22 +401,55 @@ def calc_message_score2(topics_cp, data, stats):
 
     users = list(user_df.user_id.unique())
     scores = []
+    errors = []
+    allData = None #pd.DataFrame(columns = ['message_score', 'word_count', 'retweet_count', 'favorite_count', 'fav_ret'])
     for u in users:
+
+        # print 'user: ' , u
         person = msg_df.loc[msg_df['user_id'] == u]
+        print 'person: ',
+        print person[:1]
+        person[['message_score_norm', 'word_count_norm', 'retweet_count_norm', 'favorite_count_norm', 'fav_ret_norm']] = person[['message_score', 'word_count', 'retweet_count', 'favorite_count', 'fav_ret']].transform(lambda x: (x - x.min()) / (x.max() - x.min()))
+        allData = allData.append(person) if allData is not None else person
+        # print person[:5]
         #print type( p1.corr(method='spearman') )
         #print p1.corr(method='spearman')[['score_gn_dif']]
         # scores.append(person.corr(method='spearman')['retweet_count'][['msg_score_dif']].values )
-        X = person[[ 'message_score_dif', 'user_score' ]]
-        Y = person[['retweet_dif', 'favorite_dif']]
-        scores.append(person.corr(method='spearman')['retweet_dif'][['message_score_dif']].values[0] )
+        XNormed = person[[ 'message_score_norm', 'word_count_norm' ]]
+        YNormed = person[['retweet_count_norm', 'favorite_count_norm', 'fav_ret_norm']]
+        # print X[:10]
+        # print Y[:10]
+        # XNormed = X.transform(lambda x: (x - x.mean()) / x.std())
+        # YNormed = Y.transform(lambda x: (x - x.mean()) / x.std())
+        #XNormed = X.transform(lambda x: (x - x.min()) / (x.max() - x.min()))
+        #YNormed = Y.transform(lambda x: (x - x.min()) / (x.max() - x.min()))
+        # print XNormed[:10]
+        # print YNormed[:10]
+        #norm_msg_df['user_id'] = msg_df['user_id']
+
+        err = [learn(XNormed.values,YNormed['retweet_count_norm'].values), learn(XNormed.values,YNormed['favorite_count_norm'].values),
+               learn(XNormed.values,YNormed['fav_ret_norm'].values)]
+        print 'errors: ', err
+        errors.append(err)
+
+        cor = [ person.corr(method='spearman')['retweet_count_norm'][['message_score_norm']].values[0],
+                person.corr(method='spearman')['favorite_count_norm'][['message_score_norm']].values[0] ]
+
+        scores.append( cor )
         # scores.append(learn(X.values, Y.values))
         # if person.corr(method='spearman')['favorite_dif'][['message_score_dif']].values[0] is :
-        print u, ' --- ', person.corr(method='spearman')['favorite_dif'][['message_score_dif']].values[0] , \
-            ' ---- ', person.corr(method='spearman')['retweet_dif'][['message_score_dif']].values[0]
+        print u, ' ---- ' , cor
+
+        # print u, ' ===== ', learn(X,Y[['retweet_count']].values), learn(X,Y[['favorite_count']].values)
         # if u == 1000774783:
         #     print 'person: ', person
+    allData = allData.drop(['message', 'words', 'message_score_dif',  'retweet_dif',  'favorite_dif'], axis=1)
+    print 'allllllll: '
+    print allData[:2]
+    allData.to_csv(root_dir+results_sub_dir+'score.csv', index=False)
     print scores
-    print 'mean: ' , np.mean(scores)
+    print 'mean: ' , np.mean(scores,0)
+    print 'mean: ', np.mean(errors,0)
 
     X = msg_df[['message_id' , 'message_score_dif', 'user_score', 'user_retweet', 'user_favorite' ]]
     Y = msg_df[['retweet_count', 'favorite_count']]
@@ -394,22 +459,31 @@ def calc_message_score2(topics_cp, data, stats):
 def learn(X, Y):
     print 'learn...'
     print X.shape, ' , ', Y.shape
-    x = X[:,1:]
-    y = Y[:,0]
+    x = X
+    y = Y
     # print x[:5]
     # print y[:5]
+    # print x
+    # print '<---->'
+    # print y
     reg = LinearRegression().fit(x, y) #max_iter=100, tol=1e-4)
     reg.fit(x, y)
     ypred = reg.predict(x)
     rmse1 = np.sqrt(mean_squared_error(y, ypred))
-    print 'rmse: ', rmse1
+    print 'rmse: ', rmse1  ,  '  coef: ' , reg.coef_
     # print 'coef: ', reg.coef_, ' , ', reg.intercept_
 
-    val = np.mean(y)
+    # val = np.mean(y)
     # print 'val: ', val
-    ypred2 = [ val for i in y ]
+    # ypred2 = [ val for i in y ]
+    # print X.shape
+    # print X
+    x=X[:,1].reshape(-1,1)
+    reg = LinearRegression().fit(x, y) #max_iter=100, tol=1e-4)
+    reg.fit(x, y)
+    ypred2 = reg.predict(x)
     rmse2 = np.sqrt(mean_squared_error(y, ypred2))
-    print 'rmse: ', rmse2
+    print 'rmse: ', rmse2   ,  '  coef: ' , reg.coef_
 
     # x = X[:,3:]
     # y = Y[:,0]
