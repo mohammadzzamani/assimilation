@@ -25,3 +25,48 @@
                            'train_size': 25756,
                            '{modelFS_desc}': 'None',
                            '{model_desc}': 'RidgeCV(alphas=array([ 1.00000e+00,  1.00000e-02,  1.00000e-04,  1.00000e+02,     1.00000e+04,  1.00000e+06]),   cv=None, fit_intercept=True, gcv_mode=None, normalize=False,   scoring=None, store_cv_values=False)'}}}}
+
+
+
+                     message_score  user_score  word_count
+message_id               -0.006628   -0.026349    0.080503
+user_id                  -0.020612   -0.123767   -0.002969
+retweet_count             0.122200    0.123486    0.100983
+favorite_count            0.116287    0.094560    0.099212
+is_rt                          NaN         NaN         NaN
+position                 -0.062488   -0.141315   -0.001373
+message_score             1.000000    0.388777    0.665176
+word_count                0.665176    0.344296    1.000000
+user_retweet             -0.037434   -0.062111   -0.141393
+user_favorite            -0.072479   -0.149269   -0.117695
+user_count                0.039382    0.093261    0.075753
+user_score                0.388777    1.000000    0.344296
+fav_ret                   0.122839    0.107348    0.099958
+message_score_norm        0.971588    0.279747    0.677903
+word_count_norm           0.635158    0.221876    0.912983
+retweet_count_norm        0.173531    0.239719    0.191938
+favorite_count_norm       0.177050    0.237792    0.194262
+fav_ret_norm              0.185148    0.257531    0.204172
+
+
+                     message_score_dif  message_score  user_score  word_count
+message_id                    0.007370      -0.037080   -0.080141    0.043231
+user_id                       0.010846       0.031770    0.086396    0.048166
+retweet_count                 0.117578       0.164291    0.138789    0.181759
+favorite_count                0.171857       0.173328    0.033834    0.145425
+is_rt                              NaN            NaN         NaN         NaN
+position                      0.004193       0.019697    0.050747    0.006015
+message_score                 0.900150       1.000000    0.393615    0.718962
+word_count                    0.561000       0.718962    0.475379    1.000000
+user_retweet                 -0.001173       0.065155    0.155772    0.028166
+user_favorite                -0.012711      -0.012723   -0.011656   -0.069045
+user_count                    0.008079       0.075341    0.206654    0.117736
+user_retweet_max             -0.011224      -0.043872   -0.110274   -0.118641
+user_score                   -0.000124       0.393615    1.000000    0.475379
+fav_ret                       0.181630       0.199471    0.078028    0.170937
+message_score_dif             1.000000       0.900150   -0.000124    0.561000
+message_score_norm            0.892018       0.900386    0.205287    0.623409
+word_count_norm               0.594042       0.662739    0.264124    0.869906
+retweet_count_norm            0.110217       0.159672    0.148176    0.190410
+favorite_count_norm           0.136744       0.130402    0.026120    0.145343
+fav_ret_norm                  0.139286       0.152608    0.075896    0.172362
