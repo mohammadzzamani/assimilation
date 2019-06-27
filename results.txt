@@ -27,7 +27,7 @@
                            '{model_desc}': 'RidgeCV(alphas=array([ 1.00000e+00,  1.00000e-02,  1.00000e-04,  1.00000e+02,     1.00000e+04,  1.00000e+06]),   cv=None, fit_intercept=True, gcv_mode=None, normalize=False,   scoring=None, store_cv_values=False)'}}}}
 
 
-
+stats_50
                      message_score  user_score  word_count
 message_id               -0.006628   -0.026349    0.080503
 user_id                  -0.020612   -0.123767   -0.002969
@@ -49,6 +49,8 @@ favorite_count_norm       0.177050    0.237792    0.194262
 fav_ret_norm              0.185148    0.257531    0.204172
 
 
+to2001_inf_0_p2_cs.csv
+stats_all
                      message_score_dif  message_score  user_score  word_count
 message_id                    0.007370      -0.037080   -0.080141    0.043231
 user_id                       0.010846       0.031770    0.086396    0.048166
@@ -70,3 +72,28 @@ word_count_norm               0.594042       0.662739    0.264124    0.869906
 retweet_count_norm            0.110217       0.159672    0.148176    0.190410
 favorite_count_norm           0.136744       0.130402    0.026120    0.145343
 fav_ret_norm                  0.139286       0.152608    0.075896    0.172362
+
+
+to2001_inf0_p2_cs.csv
+stats_all
+                     message_score_dif  message_score  user_score  word_count
+message_id                    0.008439      -0.033563   -0.073173    0.043231
+user_id                       0.011019       0.033303    0.086721    0.048166
+retweet_count                 0.120349       0.168210    0.140875    0.181759
+favorite_count                0.175088       0.176129    0.035524    0.145425
+is_rt                              NaN            NaN         NaN         NaN
+position                      0.004566       0.019456    0.048048    0.006015
+message_score                 0.897312       1.000000    0.400727    0.730812
+word_count                    0.568069       0.730812    0.482783    1.000000
+user_retweet                 -0.000902       0.064053    0.152246    0.028166
+user_favorite                -0.012329      -0.014173   -0.010608   -0.069045
+user_count                    0.007759       0.079378    0.217094    0.117736
+user_retweet_max             -0.011131      -0.048023   -0.116113   -0.118641
+user_score                    0.000608       0.400727    1.000000    0.482783
+fav_ret                       0.185485       0.203142    0.079599    0.170937
+message_score_dif             1.000000       0.897312    0.000608    0.568069
+message_score_norm            0.925966       0.971618    0.295765    0.689851
+word_count_norm               0.601968       0.672372    0.269124    0.869906
+retweet_count_norm            0.112632       0.163853    0.151164    0.190410
+favorite_count_norm           0.139073       0.134082    0.029631    0.145343
+fav_ret_norm                  0.142211       0.157332    0.079951    0.172362
