@@ -97,3 +97,35 @@ word_count_norm               0.601968       0.672372    0.269124    0.869906
 retweet_count_norm            0.112632       0.163853    0.151164    0.190410
 favorite_count_norm           0.139073       0.134082    0.029631    0.145343
 fav_ret_norm                  0.142211       0.157332    0.079951    0.172362
+
+ope_rank         0.249050
+ext_rank        -0.190170
+neu_rank         0.034596
+agr_rank        -0.044333
+con_rank         0.066545
+avg_rank_big5   -0.151128
+score_rank       1.000000
+
+
+lf - lr
+                     message_score_dif  message_score  user_score  word_count
+message_id                    0.010724      -0.018529   -0.046045    0.043231
+user_id                       0.010141       0.035868    0.076452    0.048166
+retweet_count                 0.127420       0.176485    0.136299    0.181759
+favorite_count                0.180998       0.178021    0.027009    0.145425
+is_rt                              NaN            NaN         NaN         NaN
+position                      0.004308       0.017465    0.042179    0.006015
+message_score                 0.885945       1.000000    0.419981    0.744670
+word_count                    0.561590       0.744670    0.509365    1.000000
+user_retweet                 -0.000162       0.057185    0.122452    0.028166
+user_favorite                -0.011534      -0.020634   -0.028847   -0.069045
+user_count                    0.005282       0.086244    0.224141    0.117736
+user_retweet_max             -0.008583      -0.063211   -0.139964   -0.118641
+user_score                   -0.004340       0.419981    1.000000    0.509365
+fav_ret                       0.192004       0.205327    0.068195    0.170937
+message_score_dif             1.000000       0.885945   -0.004340    0.561590
+message_score_norm            0.924482       0.972890    0.299272    0.691123
+word_count_norm               0.597088       0.678803    0.281612    0.869906
+retweet_count_norm            0.118844       0.174055    0.152402    0.190410
+favorite_count_norm           0.144465       0.142342    0.035198    0.145343
+fav_ret_norm                  0.147716       0.167043    0.084672    0.172362
