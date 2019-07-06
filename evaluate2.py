@@ -273,7 +273,8 @@ def calc_message_score2(topics_cp, data, stats, topics):
             print type(message)
             # vals = sorted(vals)
             # val = np.mean(vals[-10:])
-        return val# *1.0/count if count != 0 else 0
+        # print 'val: ' , val, ' count: ', count
+        return val*1.0/count if count > 4 else -1000 # *1.0/count if count != 0 else 0
     topics_cp = pd.merge(topics_cp, data, left_on=['category'], right_on=['topic'], how='inner')
     topics_cp['word_score'] =  topics_cp['weight'] * topics_cp['score']
     top10_scores = topics_cp.sort_values(['term','weight'],ascending=False).groupby('term').head(10)
@@ -298,10 +299,8 @@ def calc_message_score2(topics_cp, data, stats, topics):
     # words_score = pd.merge(words_score, top_words, left_on='term', right_on='feat', how='inner')
     print 'words_score.shape: ', words_score.shape
 
-
-
-
     words_score['word_score'] = words_score.word_score.transform(lambda x: (x-x.min())/(x.max()-x.min()))
+
 
     print words_score[:50]
     # print words_score[20:40]
@@ -316,16 +315,19 @@ def calc_message_score2(topics_cp, data, stats, topics):
     # stats.drop(stats[stats['word_count'] < 5].index, inplace=True)
     # print stats.shape
     stats['message_score'] = stats['words'].apply(partial(message_score, words_score=words_score))
+    print 'stats.shape: ', stats.shape
+    stats = stats[stats['message_score'] > -1000]
+    print 'stats.shape: ', stats.shape
 
 
-    topics = pd.merge(topics, words_score, left_on=['feat'], right_on=['topic'], how='inner')
-    topics['score_gn'] =topics['score'] *  topics['group_norm']
-    top10_scores = topics.sort_values(['group_id','group_norm'],ascending=False).groupby('group_id').head(10)
-    msg_score_df = top10_scores.groupby(['group_id'])[['score_gn']].sum()
-    print msg_score_df[:10]
-    msg_score_df = top10_scores.groupby(['group_id'])[['score_gn','group_norm']].sum()
-    msg_score_df['message_score'] =  msg_score_df['score_gn'] /  msg_score_df['group_norm']
-    print msg_score_df[:10]
+    # topics = pd.merge(topics, words_score, left_on=['feat'], right_on=['topic'], how='inner')
+    # topics['score_gn'] =topics['score'] *  topics['group_norm']
+    # top10_scores = topics.sort_values(['group_id','group_norm'],ascending=False).groupby('group_id').head(10)
+    # msg_score_df = top10_scores.groupby(['group_id'])[['score_gn']].sum()
+    # print msg_score_df[:10]
+    # msg_score_df = top10_scores.groupby(['group_id'])[['score_gn','group_norm']].sum()
+    # msg_score_df['message_score'] =  msg_score_df['score_gn'] /  msg_score_df['group_norm']
+    # print msg_score_df[:10]
 
 
 

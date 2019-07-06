@@ -94,3 +94,23 @@ select * ,   ROUND(DATEDIFF(created_at, '2006-01-01')/7, 0)  as week_min  from  
 
 
 
+------- EVALUATION ----------
+create table msg_1001_core_500 like msg_1001_nrt_core;
+insert into msg_1001_core_500  select t.* from msg_1001_nrt_core t join  ( select user_id, count(1) as cnt_ from msg_1001_nrt_core  group by user_id having cnt_ > 200 limit 500  ) s on t.user_id = s.user_id ;
+
+create table feat$cat_met_a30_2000_cp_w$msg_1001_core_500$message_id$16to16 like feat$cat_met_a30_2000_cp_w$msg_1001_nrt_core$message_id$16to16;
+insert into feat$cat_met_a30_2000_cp_w$msg_1001_core_500$message_id$16to16 select t.* from feat$cat_met_a30_2000_cp_w$msg_1001_nrt_core$message_id$16to16 t join msg_1001_core_500 s on t.group_id = s.message_id;
+create table feat$cat_met_a30_2000_cp_w$msg_1001_500_lmtd$message_id$16to16 like feat$cat_met_a30_2000_cp_w$msg_1001_core_500$message_id$16to16;
+insert into feat$cat_met_a30_2000_cp_w$msg_1001_500_lmtd$message_id$16to16  select t.* from feat$cat_met_a30_2000_cp_w$msg_1001_core_500$message_id$16to16  t join  msg_1001_core_500 s on t.group_id = s.message_id where s.retweet_count > 0  or s.favorite_count > 0;
+
+create table feat$1gram$msg_1001_core_500$message_id$16to16 like feat$1gram$msg_1001_nrt_core$message_id$16to16;
+insert into feat$1gram$msg_1001_core_500$message_id$16to16 select t.* from feat$1gram$msg_1001_nrt_core$message_id$16to16 t join msg_1001_core_500 s on t.group_id = s.message_id ;
+create table feat$1gram$msg_1001_core_500$message_id$16to16$t50ll like feat$1gram$msg_1001_nrt_core$message_id$16to16;
+insert into feat$1gram$msg_1001_core_500$message_id$16to16$t50ll select t.* from feat$1gram$msg_1001_core_500$message_id$16to16 t   join ( select distinct  term from permaLexicon.met_a30_2000_freq_t50ll) d on t.feat = d.term;
+
+
+./mysqlToCSV.bash  tt3 " select * from feat\$1gram\$msg_1001_core_500\$message_id\$16to16\$t50ll" > tt3_data/1gram_feat.csv
+./mysqlToCSV.bash tt3 " select * from feat\$cat_met_a30_2000_cp_w\$msg_1001_core_500\$message_id\$16to16  " >  tt3_data/topics_feat.csv
+./mysqlToCSV.bash tt3 " select * from feat\$cat_met_a30_2000_cp_w\$msg_1001_500_lmtd\$message_id\$16to16  " >  tt3_data/topics_lmtd_feat.csv
+./mysqlToCSV.bash tt3 " select * from  msg_1001_core_500 " > tt3_data/messages.csv
+
