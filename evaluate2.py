@@ -98,8 +98,8 @@ def read_message_data():
     topics_cp = pd.read_csv(root_dir+results_sub_dir+topics_cp_filename)
     stats['words'] = stats['message'].apply( partial( get_tokens))
 
-    top_words_filename = 'top_words.csv'
-    top_words = pd.read_csv(root_dir+results_sub_dir+top_words_filename)
+    words_filename = 'feat_words.csv'
+    top_words = pd.read_csv(root_dir+results_sub_dir+words_filename)
     print 'top_words.shape: ', top_words.shape
 
     print stats.shape
@@ -253,7 +253,7 @@ def calc_message_score(topics, data, stats):
 
 
 
-def calc_message_score2(topics_cp, data, stats, topics):
+def calc_message_score_by_words(topics_cp, data, stats, topics):
     print 'calc_message_score2...'
     def message_score(message, words_score):
         try:
@@ -539,17 +539,18 @@ def calc_message_score2(topics_cp, data, stats, topics):
 
 
 
-def calc_message_score3(topics, data, stats):
-    print 'calc_message_score3...'
+def calc_message_score_by_topics(topics, data, stats):
+    print 'calc_message_score_by_topics...'
 
     data.reset_index(inplace=True)
     print 'data.shape: ', data.shape
     print 'data.columns: ', data.columns
-    print 'unique topics in data: ', len(list(data.topic.unique()))
+    print 'unique features in data: ', len(list(data.feature.unique()))
     print 'topics:'
     print topics.shape
+    print topics[:5]
     print topics[topics['group_id']== 1046055923301711873].shape
-    topics = pd.merge(topics, data, left_on=['feat'], right_on=['topic'], how='inner')
+    topics = pd.merge(topics, data, left_on=['feat'], right_on=['feature'], how='inner')
     print '----> max: ', topics.score.max() , ' , min: ', topics.score.min()
     print topics.shape
     print topics[topics['group_id']== 1046055923301711873].shape
@@ -695,15 +696,40 @@ def learn(X, Y):
 
     return rmse1 - rmse2
 
+
+def calculate_words_score(topics_cp, data):
+    print 'calculate_words_score...'
+    topics_cp = pd.merge(topics_cp, data, left_on=['category'], right_on=['topic'], how='inner')
+    topics_cp['word_score'] = topics_cp['weight'] * topics_cp['score']
+    # top10_scores = topics_cp.sort_values(['term','weight'],ascending=False).groupby('term').head(10)
+    words_score = topics_cp.groupby('term')[['weight','word_score']].sum()
+    # words_score['word_score_sum'] = topics_cp.groupby(['term'])[[]].sum()
+    words_score['score'] =  words_score['word_score'] /  words_score['weight']
+    words_score.sort_values(['score'], ascending=False, inplace=True)
+    print 'words_score.shape: ', words_score.shape
+    # words_score = pd.merge(words_score, top_words, left_on='term', right_on='feat', how='inner')
+    # print 'words_score.shape: ', words_score.shape
+    words_score['score'] = words_score.score.transform(lambda x: (x-x.min())/(x.max()-x.min()))
+    words_score.reset_index(inplace=True)
+    words_score.columns = ['feature', 'weight_sum','word_score_sum', 'score' ]
+
+    print words_score[:50]
+    print words_score[-50:]
+
+    return words_score
+
 data = read_data()
-topics, stats, topics_cp, top_words = read_message_data()
+topics, stats, topics_cp, words = read_message_data()
 
 data = calc_contagious_score(data)
 
 calc_big5_corr(data)
 
-X, Y = calc_message_score2(topics_cp, data, stats, top_words)
+# X, Y = calc_message_score2(topics_cp, data, stats, top_words)
 # X, Y = calc_message_score3(topics, data, stats)
+
+data = calculate_words_score(topics_cp, data)
+X, Y = calc_message_score_by_topics(words, data, stats)
 
 learn(X.values, Y.values)
 
